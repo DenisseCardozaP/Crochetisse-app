@@ -8,13 +8,14 @@ import Items from './pages/Items'
 import Catalogs from './pages/Catalogs'
 import Settings from './pages/Settings'
 import PriceGroups from './pages/PriceGroups'
+import Products from './pages/Products'
 
 export interface Profile {
   role: 'owner' | 'collaborator'
   display_name: string | null
 }
 
-type Tab = 'items' | 'prices' | 'catalogs' | 'settings'
+type Tab = 'items' | 'prices' | 'products' | 'catalogs' | 'settings'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -74,6 +75,9 @@ function Shell({ session, profile }: { session: Session; profile: Profile }) {
           <button className={tab === 'prices' ? 'tab active' : 'tab'} onClick={() => setTab('prices')}>
             Precios de venta
           </button>
+          <button className={tab === 'products' ? 'tab active' : 'tab'} onClick={() => setTab('products')}>
+            Productos
+          </button>
           <button className={tab === 'catalogs' ? 'tab active' : 'tab'} onClick={() => setTab('catalogs')}>
             Proveedores y categorías
           </button>
@@ -88,6 +92,7 @@ function Shell({ session, profile }: { session: Session; profile: Profile }) {
       <main className="content">
         {tab === 'items' && <Items />}
         {tab === 'prices' && <PriceGroups isOwner={isOwner} />}
+        {tab === 'products' && <Products isOwner={isOwner} />}
         {tab === 'catalogs' && <Catalogs />}
         {tab === 'settings' && <Settings isOwner={isOwner} />}
       </main>

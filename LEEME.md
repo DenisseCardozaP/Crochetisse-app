@@ -1,3 +1,32 @@
+# ACTUALIZACIÓN 2 · Productos y costeo
+
+Qué trae: pestaña "Productos" para crear amigurumis, ramos/arreglos, combos y empaques; recetas con
+versiones (cada cambio crea una versión nueva y el historial no se toca); costo de producción calculado
+(materiales + mano de obra); un producto puede llevar otros productos (el ramo lleva conejitos) usando el
+costo completo del conejito, sin volver a contar su estambre; precio sugerido (ganancia, IVA, comisión de
+tarjeta y redondeo) y publicación del precio con fecha (solo la dueña).
+
+Pasos, en este orden:
+
+1. Supabase > SQL Editor > New query > pega TODO `supabase/0003_productos_costeo.sql` > Run. Debe decir "Success".
+   Córrelo UNA sola vez. NO vuelvas a correr 0001 ni 0002 (ya están hechos).
+2. Sube esta carpeta a tu repositorio de GitHub (Add file > Upload files, incluye `src` completa).
+   Vercel vuelve a publicar solo.
+3. Abre la app: pestaña nueva "Productos".
+
+Para probar (necesitas precio de compra registrado en los materiales que uses):
+- Crea un producto tipo Amigurumi > ábrelo > "Crear receta": horas de trabajo + materiales (cantidad en gramos o piezas).
+- Revisa "Cómo se calculó el costo" y el precio sugerido.
+- Como dueña: "Publicar precio" (sugerido o uno tuyo). Publica otro con fecha futura: hoy sigue rigiendo el actual.
+- Crea un empaque (ej. "Bolsa chica con etiqueta") con su receta de bolsa + etiqueta.
+- Crea un ramo que lleve el amigurumi (+ Otro producto) y revisa que el costo no cuente el estambre dos veces.
+- Cambia la receta: debe aparecer como versión 2 y la 1 se conserva.
+
+Nota: el estambre de VENTA no se puede usar en recetas; para producción necesitas materiales de producción
+(en gramos). Si te marca "sin precio de compra", registra el precio del material en Insumos.
+
+---
+
 # ACTUALIZACIÓN 1b (si ya publicaste la Etapa 1)
 
 Qué trae: estambre de venta por madeja, grupos de precio con escalones por cantidad
