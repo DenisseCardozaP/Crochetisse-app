@@ -11,6 +11,7 @@ import {
   pct,
   pctToFraction,
   todayMX,
+  displayDate,
 } from '../format'
 import { ErrorBox, Field, OkBox } from '../ui'
 
@@ -49,7 +50,7 @@ interface Method {
 const METHOD_LABEL = { markup: 'Sobre el costo (markup)', margin: 'Sobre el precio (margen)' }
 const ROUND_LABEL = { none: 'Sin redondeo', nearest: 'Al múltiplo más cercano', up: 'Hacia arriba' }
 const YARN_LABEL = {
-  sale_price: 'A su precio de venta',
+  sale_price: 'A su precio interno de venta',
   purchase_cost: 'A su costo de compra',
 }
 
@@ -151,7 +152,7 @@ function SettingsForm(props: { current: SettingsRow | null; onSaved: () => void 
         <Field label="Reserva de reinversión (%)" hint="Se aparta antes de repartir">
           <input inputMode="decimal" value={reserve} onChange={(e) => setReserve(e.target.value)} />
         </Field>
-        <Field label="Estambre en tus recetas">
+        <Field label="Estambre que pasa a producción">
           <select value={yarn} onChange={(e) => setYarn(e.target.value as 'purchase_cost' | 'sale_price')}>
             <option value="sale_price">{YARN_LABEL.sale_price}</option>
             <option value="purchase_cost">{YARN_LABEL.purchase_cost}</option>
@@ -340,12 +341,12 @@ export default function Settings({ isOwner }: { isOwner: boolean }) {
             </strong>
           </li>
           <li>
-            <span>Estambre en recetas</span>
+            <span>Estambre que pasa a producción</span>
             <strong>{YARN_LABEL[current.yarn_costing_mode]}</strong>
           </li>
           <li>
             <span>Rige desde</span>
-            <strong>{current.effective_from}</strong>
+            <strong>{displayDate(current.effective_from)}</strong>
           </li>
         </ul>
       ) : (
@@ -372,7 +373,7 @@ export default function Settings({ isOwner }: { isOwner: boolean }) {
               <td>{money(r.fixed_fee)}</td>
               <td>{r.vat_on_fee ? 'Sí' : 'No'}</td>
               <td>{r.passes_to_price ? 'Sí' : 'No'}</td>
-              <td>{r.valid_from}</td>
+              <td>{displayDate(r.valid_from)}</td>
             </tr>
           ))}
         </tbody>
@@ -402,7 +403,7 @@ export default function Settings({ isOwner }: { isOwner: boolean }) {
         <tbody>
           {history.map((h) => (
             <tr key={h.id}>
-              <td>{h.effective_from}</td>
+              <td>{displayDate(h.effective_from)}</td>
               <td>{money(h.labor_rate_per_hour)}</td>
               <td>
                 {pct(h.default_profit_pct)} {h.pricing_method === 'margin' ? 'margen' : 'markup'}

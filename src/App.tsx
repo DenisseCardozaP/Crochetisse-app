@@ -7,13 +7,14 @@ import { friendlyError } from './format'
 import Items from './pages/Items'
 import Catalogs from './pages/Catalogs'
 import Settings from './pages/Settings'
+import PriceGroups from './pages/PriceGroups'
 
 export interface Profile {
   role: 'owner' | 'collaborator'
   display_name: string | null
 }
 
-type Tab = 'items' | 'catalogs' | 'settings'
+type Tab = 'items' | 'prices' | 'catalogs' | 'settings'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -70,6 +71,9 @@ function Shell({ session, profile }: { session: Session; profile: Profile }) {
           <button className={tab === 'items' ? 'tab active' : 'tab'} onClick={() => setTab('items')}>
             Insumos
           </button>
+          <button className={tab === 'prices' ? 'tab active' : 'tab'} onClick={() => setTab('prices')}>
+            Precios de venta
+          </button>
           <button className={tab === 'catalogs' ? 'tab active' : 'tab'} onClick={() => setTab('catalogs')}>
             Proveedores y categorías
           </button>
@@ -83,6 +87,7 @@ function Shell({ session, profile }: { session: Session; profile: Profile }) {
       </header>
       <main className="content">
         {tab === 'items' && <Items />}
+        {tab === 'prices' && <PriceGroups isOwner={isOwner} />}
         {tab === 'catalogs' && <Catalogs />}
         {tab === 'settings' && <Settings isOwner={isOwner} />}
       </main>

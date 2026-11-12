@@ -1,3 +1,29 @@
+# ACTUALIZACIÓN 1b (si ya publicaste la Etapa 1)
+
+Qué trae: estambre de venta por madeja, grupos de precio con escalones por cantidad
+(1-4 = $70, 5-9 = $65, 10 o más = $60), precio interno ($60), tus 23 colores de Alize Velluto ya cargados,
+y la fecha "Desde el inicio" en lugar de 2000-01-01.
+
+Pasos, en este orden:
+
+1. Supabase > SQL Editor > New query > pega TODO el contenido de `supabase/0002_precios_grupo_reventa.sql` > Run.
+   Debe decir "Success". Córrelo UNA sola vez (si lo repites da error de "already exists"; no pasa nada).
+   NO vuelvas a correr `0001`.
+2. Actualiza la app: en tu repositorio de GitHub (`amigurumis-sistema`) sube los archivos de esta carpeta
+   (Add file > Upload files) para que reemplacen a los anteriores. Incluye la carpeta `src` completa.
+   Vercel vuelve a publicar solo en uno o dos minutos.
+3. Abre la app. Debe haber una pestaña nueva: "Precios de venta".
+
+Qué probar:
+- Insumos: deben aparecer 23 estambres "Alize Velluto" de tipo "Para venta".
+- Precios de venta > Alize Velluto: la tabla de precios, el precio interno y "Costo de compra: Sin registrar".
+- "Costo de compra del grupo": registra lo que te cuesta cada madeja (el paquete de 5 entre 5) y revisa que se aplique a los 23.
+- Cambia los precios a clientes con una fecha de mañana: hoy debe seguir rigiendo el actual.
+
+Las existencias (112 madejas) todavía NO están en el sistema: se cargan cuando exista el módulo de inventario.
+
+---
+
 # Sistema de gestión de amigurumis · Etapa 1 (pantallas)
 
 Esta versión incluye: inicio de sesión, insumos (con historial de precios y costo por gramo),

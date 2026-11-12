@@ -101,3 +101,8 @@ h3 { font-size: 16px; margin-top: 18px; color: var(--brand-dark); }
 .modal-head { display: flex; justify-content: space-between; align-items: center; }
 .modal-head h2 { margin: 0; }
 .cat-group { margin-top: 8px; }
+.group-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 4px 16px 14px; margin: 14px 0; }
+.group-card h3 { margin-top: 12px; }
+.group-card h4 { margin: 12px 0 6px; font-size: 14px; color: var(--muted); }
+.group-card .table { max-width: 420px; }
+.grow { flex: 1; }

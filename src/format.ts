@@ -3,6 +3,9 @@ import Decimal from 'decimal.js'
 export const todayMX = (): string =>
   new Date().toLocaleDateString('en-CA', { timeZone: 'America/Mexico_City' })
 
+// La fecha 2000-01-01 es el marcador de "desde el inicio" de los valores iniciales.
+export const displayDate = (d: string): string => (d === '2000-01-01' ? 'Desde el inicio' : d)
+
 export function money(v: number | string | null | undefined, digits = 2): string {
   if (v === null || v === undefined || v === '') return '—'
   return new Intl.NumberFormat('es-MX', {
