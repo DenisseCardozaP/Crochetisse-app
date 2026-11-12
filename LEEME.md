@@ -1,3 +1,32 @@
+# ACTUALIZACIÓN 5 · Bazares y ventas (Etapa 4a)
+
+Qué trae:
+- Pestaña "Bazares": creas el bazar (fecha, costo de mesa, fondo de caja) y armas SU lista de precios: producto, precio de
+  ese bazar y cuántas piezas llevas. Puedes copiar la lista de otro bazar y ajustar. Cada bazar puede tener precios distintos.
+- Botón "Vender": pantalla de venta con los productos como botones grandes (muestra cuántos quedan), precio editable al
+  momento, estambre por madeja (el precio por cantidad se calcula solo contando todos los colores), una bolsa por venta
+  cobrada aparte (con opción de "no la entregué": se cobra pero no descuenta inventario), efectivo con cambio, tarjeta con
+  la comisión calculada.
+- Cada venta guarda su foto: precio cobrado, costo y mano de obra de ese momento. Si cambias recetas después, no se mueve.
+- Resumen del bazar: tickets, vendido, comisiones, costo de lo vendido (con tu mano de obra), mesa, utilidad y efectivo
+  esperado en caja. Puedes anular ventas (regresan la existencia) y cerrar el bazar.
+
+Pasos:
+1. Supabase > SQL Editor > New query > pega TODO `supabase/0006_bazares_ventas.sql` > Run. "Success". UNA sola vez.
+2. Sube la carpeta a GitHub (incluye `src`). Vercel republica solo.
+
+Qué probar:
+- Bazares > Nuevo bazar > agrega tus productos (y tus bolsas como productos tipo Empaque) con precio y piezas.
+- Vender: haz un ticket con 2 productos + bolsa, cobra en efectivo. Luego otro con tarjeta y revisa la comisión.
+- Vende 5 madejas mezcladas de estambre: deben salir a $65 cada una.
+- Revisa el resumen y anula una venta: la existencia regresa.
+
+IMPORTANTE: esta versión necesita internet para guardar cada venta. El modo SIN internet para la iPad (el mismo
+mecanismo que probamos en la Etapa 0) es la siguiente entrega (4b), antes de que lo uses en un bazar real.
+Para el bazar de este fin de semana sigue usando tu hoja de cálculo.
+
+---
+
 # ACTUALIZACIÓN 4 · Producción y estambre a producción (Etapa 3b)
 
 Qué trae:
