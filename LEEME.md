@@ -1,3 +1,31 @@
+# ACTUALIZACIÓN 3 · Compras e inventario (ya con tus correcciones)
+
+Qué trae:
+- Corrección de IVA: los productos usan IVA 0% por ahora; la comisión de tarjeta conserva su IVA (2.99% + $1 + IVA de la comisión).
+  Cuando empieces a cobrar IVA, se cambia el IVA predeterminado (o el de cada producto).
+- Pestaña "Compras": registras la compra completa (varios materiales + envío + total). El envío se reparte entre los
+  renglones según su valor y de ahí sale el costo real de cada madeja/gramo ya puesto en tu casa.
+- Costo con promedio ponderado: si el estambre subió, el nuevo costo mezcla lo que ya tenías con lo nuevo (sin brincos).
+  Los costos de fechas pasadas no cambian.
+- Pestaña "Inventario": existencia, costo y valor de cada material; ajustes por conteo, merma o regalo.
+- Tu existencia inicial de estambre de venta: 112 madejas en 23 colores, a $42.40 por madeja ($212 / 5).
+
+Pasos, en este orden:
+1. Supabase > SQL Editor > New query > pega TODO `supabase/0004_compras_inventario.sql` > Run. "Success". UNA sola vez.
+   (0001, 0002 y 0003 NO se vuelven a correr.)
+2. Sube la carpeta a GitHub (incluye `src` completa). Vercel republica solo.
+
+Qué probar:
+- Inventario: 23 colores de Alize Velluto con su existencia; el Negro debe tener 9.
+- Productos: el precio sugerido ahora sale sin IVA.
+- Crea un material de producción (Insumos): tipo Material, unidad de compra "madeja", unidad base "g", unidades por compra 100.
+  Luego Compras > Registrar compra: 5 madejas, total $212, envío lo que pagaste. Revisa el costo por gramo.
+- Haz otra compra con otro precio y mira cómo el costo se mezcla (promedio).
+
+Aún no existe: pasar estambre de venta a producción, usar materiales al producir, ventas. Siguen en la siguiente etapa.
+
+---
+
 # ACTUALIZACIÓN 2 · Productos y costeo
 
 Qué trae: pestaña "Productos" para crear amigurumis, ramos/arreglos, combos y empaques; recetas con

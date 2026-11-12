@@ -28,6 +28,7 @@ interface SettingsRow {
   isr_enabled: boolean
   isr_pct: number
   yarn_costing_mode: 'purchase_cost' | 'sale_price'
+  default_iva_rate: number
   note: string | null
 }
 
@@ -67,6 +68,7 @@ function SettingsForm(props: { current: SettingsRow | null; onSaved: () => void 
   const [isr, setIsr] = useState(c?.isr_enabled ?? false)
   const [isrPct, setIsrPct] = useState(c ? fractionToPct(c.isr_pct) : '0')
   const [yarn, setYarn] = useState<'purchase_cost' | 'sale_price'>(c?.yarn_costing_mode ?? 'sale_price')
+  const [iva, setIva] = useState(c ? String(c.default_iva_rate ?? 0.16) : '0.16')
   const [note, setNote] = useState('')
   const [error, setError] = useState('')
   const [ok, setOk] = useState('')
@@ -99,6 +101,7 @@ function SettingsForm(props: { current: SettingsRow | null; onSaved: () => void 
       isr_enabled: isr,
       isr_pct: isr ? pctToFraction(isrPct) : '0',
       yarn_costing_mode: yarn,
+      default_iva_rate: iva,
       note: note.trim() || null,
     })
     setBusy(false)
@@ -151,6 +154,12 @@ function SettingsForm(props: { current: SettingsRow | null; onSaved: () => void 
         </Field>
         <Field label="Reserva de reinversión (%)" hint="Se aparta antes de repartir">
           <input inputMode="decimal" value={reserve} onChange={(e) => setReserve(e.target.value)} />
+        </Field>
+        <Field label="IVA en los precios de productos" hint="Se usa al calcular el precio sugerido (cada producto puede tener el suyo).">
+          <select value={iva} onChange={(e) => setIva(e.target.value)}>
+            <option value="0.16">Con IVA 16%</option>
+            <option value="0">Sin IVA (0%)</option>
+          </select>
         </Field>
         <Field label="Estambre que pasa a producción">
           <select value={yarn} onChange={(e) => setYarn(e.target.value as 'purchase_cost' | 'sale_price')}>
@@ -343,6 +352,10 @@ export default function Settings({ isOwner }: { isOwner: boolean }) {
           <li>
             <span>Estambre que pasa a producción</span>
             <strong>{YARN_LABEL[current.yarn_costing_mode]}</strong>
+          </li>
+          <li>
+            <span>IVA en precios de productos</span>
+            <strong>{pct(current.default_iva_rate ?? 0.16)}</strong>
           </li>
           <li>
             <span>Rige desde</span>

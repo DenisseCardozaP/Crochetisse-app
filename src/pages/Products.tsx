@@ -207,7 +207,7 @@ function ProductForm(props: {
           </Field>
           <Field label="IVA">
             <select value={taxId} onChange={(e) => setTaxId(e.target.value)}>
-              <option value="">IVA 16% (predeterminado)</option>
+              <option value="">IVA predeterminado (hoy 0%)</option>
               {props.taxRates.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
