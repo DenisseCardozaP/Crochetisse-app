@@ -491,7 +491,7 @@ function PublishPrice(props: {
   }
 
   return (
-    <Modal title={`Publicar precio de ${props.product.name}`} onClose={props.onClose}>
+    <Modal title={`Precio de referencia de ${props.product.name}`} onClose={props.onClose}>
       <p>
         Precio sugerido hoy: <strong>{money(s.suggested_price)}</strong> (IVA incluido)
       </p>
@@ -509,8 +509,7 @@ function PublishPrice(props: {
           <input value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
         <p className="hint">
-          Se guarda también cómo se calculó el sugerido. El precio publicado no se puede editar: para cambiarlo,
-          publica uno nuevo con otra fecha.
+          Se guarda también cómo se calculó el sugerido. Es solo una referencia: el precio real lo decides en cada bazar o cotización. No se edita; para cambiarlo guarda uno nuevo con otra fecha.
         </p>
         <ErrorBox message={error} />
         <div className="actions">
@@ -518,7 +517,7 @@ function PublishPrice(props: {
             Cancelar
           </button>
           <button className="primary" disabled={busy}>
-            {busy ? 'Publicando...' : 'Publicar precio'}
+            {busy ? 'Guardando...' : 'Guardar precio'}
           </button>
         </div>
       </form>
@@ -599,7 +598,7 @@ function ProductDetail(props: {
         <button onClick={() => setMode('edit')}>Datos del producto</button>
         {props.isOwner && (
           <button disabled={!sug} onClick={() => setMode('price')}>
-            Publicar precio
+            Precio de referencia
           </button>
         )}
       </div>
@@ -690,9 +689,9 @@ function ProductDetail(props: {
         </>
       )}
 
-      <h3>Precios publicados</h3>
+      <h3>Precios de referencia guardados</h3>
       {prices.length === 0 ? (
-        <p className="muted">Aún no hay precio publicado.</p>
+        <p className="muted">Aún no hay precio de referencia.</p>
       ) : (
         <table className="table">
           <thead>
@@ -752,7 +751,7 @@ function ProductDetail(props: {
         />
       )}
       {mode === 'price' && sug && (
-        <PublishPrice product={p} suggestion={sug} onSaved={() => saved('Precio publicado.')} onClose={() => setMode('')} />
+        <PublishPrice product={p} suggestion={sug} onSaved={() => saved('Precio de referencia guardado.')} onClose={() => setMode('')} />
       )}
     </Modal>
   )
@@ -841,7 +840,7 @@ export default function Products({ isOwner }: { isOwner: boolean }) {
                 <th>Tipo</th>
                 <th>Costo</th>
                 <th>Sugerido</th>
-                <th>Precio publicado</th>
+                <th>Precio de referencia</th>
               </tr>
             </thead>
             <tbody>

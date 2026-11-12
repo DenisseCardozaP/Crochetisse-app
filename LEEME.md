@@ -1,3 +1,31 @@
+# ACTUALIZACIÓN 4 · Producción y estambre a producción (Etapa 3b)
+
+Qué trae:
+- Pestaña "Producción": registras N piezas producidas. Se descuentan los materiales de la receta (con merma) y se suman
+  las piezas al inventario de producto terminado. Cada tanda guarda su costo REAL (materiales al costo promedio de ese
+  día + mano de obra) junto al costo estimado, para que compares.
+- Ramos y arreglos: toman sus piezas del producto terminado si hay; las que faltan se tejen desde cero (se descuentan
+  sus materiales y se cuenta su mano de obra).
+- "Pasar estambre a producción": sale de tu estambre de venta (a su costo de compra) y entra al material de producción en
+  gramos al precio interno ($60 por madeja). No cuenta como venta. El costo del material de producción se mezcla con promedio.
+- El precio guardado de un producto ahora se llama "precio de referencia": el precio real lo decides en cada bazar y en cada
+  cotización de pedido (eso viene en la etapa de ventas).
+
+Pasos:
+1. Supabase > SQL Editor > New query > pega TODO `supabase/0005_produccion.sql` > Run. "Success". UNA sola vez.
+2. Sube la carpeta a GitHub (incluye `src`). Vercel republica solo.
+
+Qué probar:
+- Insumos: crea "Estambre producción" (Material, unidad de compra madeja, unidad base g, 100 por compra).
+- Producción > Pasar estambre a producción: 1 madeja de Negro -> tu material en gramos. Inventario: Negro baja 1, producción sube 100 g.
+- Crea un amigurumi con receta (usando ese material) y registra producción de 2 piezas. Revisa el descuento en Inventario.
+- Crea un ramo que lleve ese amigurumi y prodúcelo: usa las piezas terminadas y teje las que falten.
+
+Nota: si produces sin tener existencia registrada de un material, la existencia queda negativa (se ve en Inventario): es
+señal de que falta registrar una compra o un conteo.
+
+---
+
 # ACTUALIZACIÓN 3 · Compras e inventario (ya con tus correcciones)
 
 Qué trae:
