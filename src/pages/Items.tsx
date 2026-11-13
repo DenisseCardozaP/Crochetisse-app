@@ -10,6 +10,7 @@ import {
   todayMX,
 } from '../format'
 import { ErrorBox, Field, Modal } from '../ui'
+import ImportItems from './ImportItems'
 
 type Kind = 'material' | 'packaging' | 'resale'
 
@@ -570,6 +571,7 @@ export default function Items() {
   const [showInactive, setShowInactive] = useState(false)
   const [detailId, setDetailId] = useState<string | null>(null)
   const [form, setForm] = useState<{ item: ItemRow | null; locked: boolean } | null>(null)
+  const [importing, setImporting] = useState(false)
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.from('v_item_list').select('*').order('name')
@@ -603,6 +605,7 @@ export default function Items() {
     <div>
       <div className="section-head">
         <h2>Insumos</h2>
+        <button onClick={() => setImporting(true)}>Importar CSV</button>
         <button className="primary" onClick={() => setForm({ item: null, locked: false })}>
           + Nuevo insumo
         </button>
@@ -691,6 +694,14 @@ export default function Items() {
             await load()
             setDetailId(id)
           }}
+        />
+      )}
+
+      {importing && (
+        <ImportItems
+          existing={rows}
+          onDone={load}
+          onClose={() => setImporting(false)}
         />
       )}
     </div>

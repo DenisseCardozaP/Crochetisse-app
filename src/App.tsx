@@ -19,6 +19,7 @@ import Expenses from './pages/Expenses'
 import Earnings from './pages/Earnings'
 import Dashboard from './pages/Dashboard'
 import WhatToBring from './pages/WhatToBring'
+import Backup from './pages/Backup'
 
 export interface Profile {
   role: 'owner' | 'collaborator'
@@ -59,6 +60,7 @@ type Tab =
   | 'payroll'
   | 'catalogs'
   | 'settings'
+  | 'backup'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -121,7 +123,7 @@ function Shell({ email, profile }: { email: string; profile: Profile }) {
         { id: 'payroll', label: 'Mi nómina', owner: true },
       ],
     },
-    { title: 'Sistema', items: [{ id: 'settings', label: 'Configuración' }] },
+    { title: 'Sistema', items: [{ id: 'settings', label: 'Configuración' }, { id: 'backup', label: 'Respaldo', owner: true }] },
   ]
   const go = (t: Tab) => {
     setTab(t)
@@ -154,6 +156,7 @@ function Shell({ email, profile }: { email: string; profile: Profile }) {
             </div>
           )
         })}
+        <div className="side-checker" />
         <div className="side-foot">
           {email}
           <button
@@ -183,6 +186,7 @@ function Shell({ email, profile }: { email: string; profile: Profile }) {
         {tab === 'payroll' && isOwner && <Earnings view="payroll" />}
         {tab === 'catalogs' && <Catalogs />}
         {tab === 'settings' && <Settings isOwner={isOwner} />}
+        {tab === 'backup' && isOwner && <Backup />}
       </main>
     </div>
   )

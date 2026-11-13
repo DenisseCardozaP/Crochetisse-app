@@ -1,13 +1,14 @@
-# ACTUALIZACIÓN 11 · Panel, "Qué llevar" y nuevo diseño (Etapa 7)
+# ACTUALIZACIÓN 12 · Diseño divertido + respaldo, reseteo e importación (Etapa 8)
 
-- **Panel** (pantalla de inicio): ventas netas, utilidad y nómina pendiente de la quincena (solo dueña), pedidos por entregar y vencidos, cobros pendientes, insumos con poca existencia, últimos bazares y sugerencias para el próximo.
-- **Qué llevar**: con tus bazares anteriores calcula por producto cuántas piezas llevar (Estrella / Constante / Lento / Sin ventas / Nuevo), cuánto te falta tejer y tu ganancia por pieza. Con un botón carga las cantidades a la lista de un bazar abierto.
-- **Diseño nuevo**: rosa, verde salvia y café sobre fondo crema, letras con serifa en los títulos, menú lateral con secciones (en pantallas chicas se abre con el botón ☰) e íconos nuevos.
-- Para que el aviso de "poca existencia" funcione, define el mínimo de cada insumo en Insumos.
+- **Diseño nuevo**: letra Poppins en negritas, rosa fuerte, verde olivo y café sobre crema con cuadros tipo tablero, botones tipo píldora y tarjetas de colores. La letra viene incluida en la app (funciona sin internet).
+- **Respaldo** (Sistema > Respaldo, solo dueña): descarga TODO el negocio en un archivo. El Panel te avisa si pasan más de 7 días sin respaldar.
+- **Importar CSV** (Insumos > Importar CSV): sube tu lista de insumos desde Excel/Sheets con precio y existencia inicial. Trae plantilla, revisión previa y omite duplicados.
+- **Reseteo actualizado**: `supabase/reset_datos_de_prueba.sql` ahora también limpia gastos y retiros. En la pantalla Respaldo está el paso a paso para empezar de verdad.
 
 Pasos:
-1. Supabase > SQL Editor > New query > pega TODO `supabase/0011_recomendaciones_bazar.sql` > Run. UNA sola vez. (Solo lee datos; no cambia nada.)
-2. Sube la carpeta a GitHub (incluye `src` y `public`). Si el ícono de tu iPad no cambia, bórralo de la pantalla de inicio y vuelve a agregarlo.
+1. Supabase > SQL Editor > New query > pega TODO `supabase/0012_respaldo.sql` > Run. UNA sola vez. (Solo lee datos.)
+2. Sube la carpeta a GitHub (incluye `package.json`, `src`, `public`). Vercel instalará la letra al publicar.
+3. NO ejecutes el reseteo todavía: primero descarga un respaldo y termina tus pruebas.
 
 ---
 

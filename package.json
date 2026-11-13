@@ -1,7 +1,7 @@
 {
   "name": "amigurumis-etapa1",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.8.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host",
@@ -14,7 +14,8 @@
     "decimal.js": "^10.4.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "dexie": "^4.0.8"
+    "dexie": "^4.0.8",
+    "@fontsource/poppins": "^5.1.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.11",

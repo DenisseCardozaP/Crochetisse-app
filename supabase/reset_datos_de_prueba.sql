@@ -73,6 +73,7 @@ create temp table t_prices as select * from public.product_prices where product_
 
 -- 3. Vaciar (TRUNCATE no dispara los candados de "no se puede borrar"; se hace todo junto por las relaciones)
 truncate table
+  public.expense_voids, public.expenses, public.withdrawal_voids, public.withdrawals,
   public.order_payments, public.order_line_components, public.order_lines, public.orders, public.folio_counters,
   public.sale_voids, public.sale_lines, public.sales,
   public.event_products, public.events,

@@ -3,6 +3,7 @@ import { supabase } from '../supabase'
 import { friendlyError, money, todayMX } from '../format'
 import { ErrorBox } from '../ui'
 import { TAG_LABEL, toReco } from './WhatToBring'
+import { lastBackup } from './Backup'
 import type { Reco } from './WhatToBring'
 
 interface LowItem {
@@ -106,6 +107,8 @@ export default function Dashboard({ isOwner, onGo }: { isOwner: boolean; onGo: (
     }
   }, [isOwner, today])
 
+  const lb = lastBackup()
+  const backupDays = lb ? Math.round((Date.parse(today) - Date.parse(lb)) / 86400000) : 9999
   const upcoming = orders.filter((o) => o.status === 'confirmed').slice(0, 6)
   const lateCount = orders.filter((o) => o.status === 'confirmed' && o.due_date && o.due_date < today).length
   const toCollect = orders.filter((o) => o.balance > 0)
@@ -117,10 +120,23 @@ export default function Dashboard({ isOwner, onGo }: { isOwner: boolean; onGo: (
 
   return (
     <div>
-      <div className="hello">Hola 🌸</div>
-      <p className="muted" style={{ marginTop: 0 }}>
-        Esto es lo que necesita tu atención hoy.
-      </p>
+      <div className="hero">
+        <div>
+          <h1>¡Hola! 🌸</h1>
+          <p>Esto es lo que necesita tu atención hoy.</p>
+          <span className="date-pill">{new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Mexico_City' })}</span>
+        </div>
+        <div className="checker two" />
+        <div className="checker" />
+      </div>
+      {isOwner && backupDays !== null && backupDays > 7 && (
+        <div className="alert-banner">
+          {lastBackup() ? `Hace ${backupDays} días que no respaldas tu información.` : 'Todavía no has descargado un respaldo.'}{' '}
+          <button className="linkish" onClick={() => onGo('backup')}>
+            Descargar respaldo
+          </button>
+        </div>
+      )}
       <ErrorBox message={error} />
       {loading ? (
         <p className="muted">Cargando...</p>
@@ -134,14 +150,12 @@ export default function Dashboard({ isOwner, onGo }: { isOwner: boolean; onGo: (
                   <div className="n">{money(q.net_sales)}</div>
                   <div className="s">Solo lo concretado</div>
                 </div>
-                <div className="stat sage">
+                <div className="stat">
                   <div className="k">Utilidad del negocio</div>
-                  <div className="n" style={q.utility < 0 ? { color: 'var(--bad)' } : undefined}>
-                    {money(q.utility)}
-                  </div>
+                  <div className="n">{money(q.utility)}</div>
                   <div className="s">Después de tu sueldo</div>
                 </div>
-                <div className="stat cocoa">
+                <div className="stat">
                   <div className="k">Pendiente por retirar</div>
                   <div className="n">{money(balance ?? 0)}</div>
                   <div className="s">Tu nómina acumulada</div>
@@ -151,16 +165,16 @@ export default function Dashboard({ isOwner, onGo }: { isOwner: boolean; onGo: (
             <div className="stat">
               <div className="k">Pedidos por entregar</div>
               <div className="n">{orders.filter((o) => o.status === 'confirmed').length}</div>
-              <div className="s" style={lateCount ? { color: 'var(--bad)' } : undefined}>
+              <div className="s" style={lateCount ? { fontWeight: 700 } : undefined}>
                 {lateCount ? `${lateCount} con fecha vencida` : 'Ninguno vencido'}
               </div>
             </div>
-            <div className="stat sage">
+            <div className="stat">
               <div className="k">Por cobrar</div>
               <div className="n">{money(collectTotal)}</div>
               <div className="s">{toCollect.length} pedido(s) con saldo</div>
             </div>
-            <div className="stat cocoa">
+            <div className="stat">
               <div className="k">Insumos con poca existencia</div>
               <div className="n">{low.length}</div>
               <div className="s">Según el mínimo de cada insumo</div>
