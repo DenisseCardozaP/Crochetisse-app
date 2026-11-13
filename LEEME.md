@@ -1,3 +1,29 @@
+# ACTUALIZACIÓN 7 · Cotizaciones y pedidos (Etapa 5)
+
+Qué trae:
+- Pestaña "Pedidos": cotizas (folio OP-2026-0001), confirmas y se vuelve pedido (folio PED-2026-0001).
+- El precio de cada renglón lo decides tú. Al cotizar ves la referencia, el costo estimado (con tu mano de obra) y tu utilidad.
+- Renglones: productos, bolsa (precio libre, puede ser $0) y renglones libres (envío, etc., con su costo si quieres).
+- Ramo personalizado: marcas el renglón y eliges sus piezas (por ejemplo 1 conejito + 2 girasoles) en lugar de la receta base.
+- Pagos: anticipo, resto y devoluciones, cada uno con su forma de pago y fecha. Un anticipo NO cuenta como venta.
+- Entregar: lo que haya en producto terminado se toma de ahí y lo que falte se teje en ese momento (se descuentan sus
+  materiales); la bolsa se descuenta al entregar. Se guarda la foto del costo real y de tu mano de obra.
+- Un pedido queda "concretado" cuando está entregado Y pagado completo. Eso es lo que contará para tus ganancias.
+- Cambios internos: la producción ahora acepta piezas personalizadas (lo usa la entrega); sin cambios para ti.
+- También: ya no hay casilla de "entregué la bolsa" en la venta de bazar (si la agregas, se entregó).
+
+Pasos:
+1. Supabase > SQL Editor > New query > pega TODO `supabase/0007_pedidos.sql` > Run. "Success". UNA sola vez.
+2. Sube la carpeta a GitHub (incluye `src`). Vercel republica solo.
+
+Qué probar:
+- Pedidos > Nueva cotización: cliente, 2 productos con TU precio, una bolsa en $0 y un envío como renglón libre.
+- Confirmar: debe aparecer el folio PED. Registra un anticipo y revisa el saldo.
+- Entregar: revisa que el inventario baje y que el costo real y la utilidad aparezcan. Registra el pago del saldo: pasa a "Concretado".
+- Prueba un ramo personalizado y una cancelación.
+
+---
+
 # ACTUALIZACIÓN 6 · Venta sin internet en la iPad (Etapa 4b) + script de reinicio
 
 Qué trae:

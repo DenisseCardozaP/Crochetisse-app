@@ -4,7 +4,7 @@
 --
 -- ANTES: saca un respaldo (Supabase > Database > Backups, o pídeme el pg_dump). Esto BORRA datos.
 --
--- BORRA:  ventas, bazares, producción, compras, movimientos de inventario, productos y recetas,
+-- BORRA:  ventas, bazares, cotizaciones y pedidos (los folios vuelven a empezar en 0001), producción, compras, movimientos de inventario, productos y recetas,
 --         precios de referencia, historial de costos, bitácora de cambios y los insumos que no
 --         estén en la lista de conservar.
 -- CONSERVA: tu usuario y perfil, configuración (tarifa, ganancia, redondeo), IVA, métodos de pago y
@@ -73,6 +73,7 @@ create temp table t_prices as select * from public.product_prices where product_
 
 -- 3. Vaciar (TRUNCATE no dispara los candados de "no se puede borrar"; se hace todo junto por las relaciones)
 truncate table
+  public.order_payments, public.order_line_components, public.order_lines, public.orders, public.folio_counters,
   public.sale_voids, public.sale_lines, public.sales,
   public.event_products, public.events,
   public.product_stock_movements, public.production_runs, public.yarn_transfers,
@@ -145,6 +146,7 @@ declare n int; v numeric;
 begin
   select count(*) into n from public.sales;           if n <> 0 then raise exception 'Quedaron ventas.'; end if;
   select count(*) into n from public.events;          if n <> 0 then raise exception 'Quedaron bazares.'; end if;
+  select count(*) into n from public.orders;          if n <> 0 then raise exception 'Quedaron pedidos.'; end if;
   select count(*) into n from public.purchases;       if n <> 0 then raise exception 'Quedaron compras.'; end if;
   select count(*) into n from public.production_runs; if n <> 0 then raise exception 'Quedó producción.'; end if;
   select sum(s.stock_qty) into v from public.v_item_stock s join public.items i on i.id = s.item_id where i.brand = 'Alize Velluto';

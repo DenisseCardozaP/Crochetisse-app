@@ -48,7 +48,6 @@ export default function Sell(props: {
   const [rows, setRows] = useState<Row[]>([])
   const [yarnRows, setYarnRows] = useState<YarnRow[]>([])
   const [bagId, setBagId] = useState('')
-  const [bagDelivered, setBagDelivered] = useState(true)
   const [bagPrice, setBagPrice] = useState('')
   const [methodId, setMethodId] = useState('')
   const [received, setReceived] = useState('')
@@ -113,7 +112,6 @@ export default function Sell(props: {
     setYarnRows([])
     setBagId('')
     setBagPrice('')
-    setBagDelivered(true)
     setReceived('')
     setNote('')
     setClientId(crypto.randomUUID())
@@ -136,7 +134,7 @@ export default function Sell(props: {
       ...rows.map((r) => ({ type: 'product', product_id: r.productId, qty: r.qty, unit_price: r.price })),
       ...yarnRows.map((y) => ({ type: 'item', item_id: y.itemId, qty: y.qty })),
     ]
-    if (bagId) lines.push({ type: 'packaging', product_id: bagId, qty: 1, unit_price: bagPrice, delivered: bagDelivered })
+    if (bagId) lines.push({ type: 'packaging', product_id: bagId, qty: 1, unit_price: bagPrice, delivered: true })
     const summary = [
       ...rows.map((r) => `${r.qty}× ${r.name}`),
       ...yarnRows.map((y) => `${y.qty}× ${yarnName.get(y.itemId) ?? 'estambre'}`),
@@ -262,11 +260,6 @@ export default function Sell(props: {
                 <input inputMode="decimal" value={bagPrice} disabled={!bagId} onChange={(e) => setBagPrice(e.target.value)} />
               </label>
             </div>
-            {bagId && (
-              <label className="inline">
-                <input type="checkbox" checked={bagDelivered} onChange={(e) => setBagDelivered(e.target.checked)} /> Entregué la bolsa (si no, se cobra pero no descuenta inventario)
-              </label>
-            )}
 
             <label className="field">
               <span className="label">Forma de pago</span>

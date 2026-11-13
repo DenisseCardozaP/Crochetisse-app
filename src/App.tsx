@@ -14,6 +14,7 @@ import Inventory from './pages/Inventory'
 import Production from './pages/Production'
 import Events from './pages/Events'
 import Pos from './pages/Pos'
+import Orders from './pages/Orders'
 
 export interface Profile {
   role: 'owner' | 'collaborator'
@@ -37,7 +38,7 @@ function readSavedLogin(): SavedLogin | null {
   }
 }
 
-type Tab = 'items' | 'prices' | 'products' | 'purchases' | 'inventory' | 'production' | 'events' | 'pos' | 'catalogs' | 'settings'
+type Tab = 'items' | 'prices' | 'products' | 'purchases' | 'inventory' | 'production' | 'events' | 'pos' | 'orders' | 'catalogs' | 'settings'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -109,6 +110,9 @@ function Shell({ email, profile }: { email: string; profile: Profile }) {
           <button className={tab === 'inventory' ? 'tab active' : 'tab'} onClick={() => setTab('inventory')}>
             Inventario
           </button>
+          <button className={tab === 'orders' ? 'tab active' : 'tab'} onClick={() => setTab('orders')}>
+            Pedidos
+          </button>
           <button className={tab === 'events' ? 'tab active' : 'tab'} onClick={() => setTab('events')}>
             Bazares
           </button>
@@ -142,6 +146,7 @@ function Shell({ email, profile }: { email: string; profile: Profile }) {
         {tab === 'inventory' && <Inventory />}
         {tab === 'production' && <Production />}
         {tab === 'events' && <Events />}
+        {tab === 'orders' && <Orders />}
         {tab === 'catalogs' && <Catalogs />}
         {tab === 'settings' && <Settings isOwner={isOwner} />}
       </main>
