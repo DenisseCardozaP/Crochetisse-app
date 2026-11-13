@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import type { ReactNode } from 'react'
 
 export function Field(props: { label: string; hint?: string; children: ReactNode }) {
@@ -21,9 +22,20 @@ export function OkBox({ message }: { message: string }) {
 }
 
 export function Modal(props: { title: string; onClose: () => void; children: ReactNode }) {
+  const downOnBackdrop = useRef(false)
   return (
-    <div className="modal-back" onClick={props.onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+    // Solo se cierra si el clic empezó Y terminó fuera de la ventana (arrastrar para seleccionar texto no la cierra)
+    <div
+      className="modal-back"
+      onMouseDown={(e) => {
+        downOnBackdrop.current = e.target === e.currentTarget
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && downOnBackdrop.current) props.onClose()
+        downOnBackdrop.current = false
+      }}
+    >
+      <div className="modal">
         <div className="modal-head">
           <h2>{props.title}</h2>
           <button type="button" onClick={props.onClose} aria-label="Cerrar">

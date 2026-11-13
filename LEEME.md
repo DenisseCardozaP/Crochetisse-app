@@ -1,3 +1,19 @@
+# ACTUALIZACIÓN 8 · Pedidos: precio del pedido completo + arreglos por pieza
+
+Cambios:
+- El precio se decide UNA vez para todo el pedido. La pantalla te muestra el costo estimado de todo, un precio sugerido con tu
+  ganancia (botón "Usar") y tu utilidad con el precio que pongas. Sin precio por pieza.
+- El empaque es una selección del pedido: su costo siempre cuenta y su precio va incluido en el total.
+- Ramos y arreglos: al elegirlos aparecen las piezas de su receta; las cambias a lo que pidió el cliente (quitas, agregas,
+  cambias cantidades). No necesitas crear un producto nuevo por cada ramo.
+- Ya no se sale la ventanita al seleccionar texto y soltar el mouse fuera de ella.
+
+Pasos:
+1. Supabase > SQL Editor > New query > pega TODO `supabase/0008_pedido_precio_total.sql` > Run. "Success". UNA sola vez.
+2. Sube la carpeta a GitHub (incluye `src`). Vercel republica solo.
+
+---
+
 # ACTUALIZACIÓN 7 · Cotizaciones y pedidos (Etapa 5)
 
 Qué trae:

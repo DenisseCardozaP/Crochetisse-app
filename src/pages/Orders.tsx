@@ -100,6 +100,7 @@ const D = (s: string | number | null | undefined): Decimal => {
 const folioOf = (o: Summary) => o.order_folio ?? o.quote_folio
 
 // ---------------------------------------------------------------- cotizar / editar
+// El precio se decide para el pedido completo. Los renglones solo dicen QUÉ lleva el pedido.
 function OrderForm(props: { order: Summary | null; products: ProductOpt[]; onSaved: (id: string) => void; onClose: () => void }) {
   const o0 = props.order
   const [customer, setCustomer] = useState(o0?.customer_name ?? '')
@@ -107,14 +108,22 @@ function OrderForm(props: { order: Summary | null; products: ProductOpt[]; onSav
   const [due, setDue] = useState(o0?.due_date ?? '')
   const [notes, setNotes] = useState(o0?.notes ?? '')
   const [lines, setLines] = useState<DraftLine[]>([])
+  const [bagId, setBagId] = useState('')
+  const [total, setTotal] = useState(o0 ? String(o0.total) : '')
   const [loaded, setLoaded] = useState(!o0)
-  const [est, setEst] = useState<number[]>([])
+  const [estTotal, setEstTotal] = useState<number | null>(null)
+  const [suggest, setSuggest] = useState<number | null>(null)
+  const [withCard, setWithCard] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
   const goods = props.products.filter((p) => p.is_active && p.kind !== 'packaging')
   const bags = props.products.filter((p) => p.is_active && p.kind === 'packaging')
   const byId = useMemo(() => new Map(props.products.map((p) => [p.id, p])), [props.products])
+  const isGroup = (id: string) => {
+    const k = byId.get(id)?.kind
+    return k === 'assembly' || k === 'bundle'
+  }
 
   useEffect(() => {
     if (!o0) return
@@ -131,21 +140,22 @@ function OrderForm(props: { order: Summary | null; products: ProductOpt[]; onSav
       if (!alive) return
       if (l.error) return setError(friendlyError(l.error.message))
       const comps = (c.data ?? []) as CompRow[]
+      const rows = (l.data ?? []) as LineRow[]
+      setBagId(rows.find((x) => x.line_type === 'packaging')?.product_id ?? '')
       setLines(
-        ((l.data ?? []) as LineRow[]).map((x) => {
-          const mine = comps.filter((k) => k.line_id === x.id)
-          return {
+        rows
+          .filter((x) => x.line_type !== 'packaging')
+          .map((x) => ({
             key: x.id,
             type: x.line_type,
             productId: x.product_id ?? '',
             description: x.description,
             qty: String(x.qty),
-            price: String(x.unit_price),
+            price: '',
             unitCost: String(x.custom_unit_cost),
-            custom: mine.length > 0,
-            comps: mine.map((k) => ({ productId: k.component_product_id, qty: String(k.qty) })),
-          }
-        }),
+            custom: false,
+            comps: comps.filter((k) => k.line_id === x.id).map((k) => ({ productId: k.component_product_id, qty: String(k.qty) })),
+          })),
       )
       setLoaded(true)
     })()
@@ -155,62 +165,69 @@ function OrderForm(props: { order: Summary | null; products: ProductOpt[]; onSav
   }, [o0])
 
   function payload() {
-    return lines.map((l) => {
-      if (l.type === 'custom')
-        return { type: 'custom', description: l.description, qty: l.qty, unit_price: l.price, unit_cost: l.unitCost || '0' }
-      const base: Record<string, unknown> = { type: l.type, product_id: l.productId, qty: l.qty, unit_price: l.price }
-      if (l.type === 'product' && l.custom && l.comps.length > 0)
-        base.components = l.comps.map((c) => ({ component_product_id: c.productId, qty: c.qty }))
+    const out: Record<string, unknown>[] = lines.map((l) => {
+      if (l.type === 'custom') return { type: 'custom', description: l.description, qty: l.qty, unit_cost: l.unitCost || '0' }
+      const base: Record<string, unknown> = { type: 'product', product_id: l.productId, qty: l.qty }
+      if (isGroup(l.productId) && l.comps.length > 0) base.components = l.comps.map((c) => ({ component_product_id: c.productId, qty: c.qty }))
       return base
     })
+    if (bagId) out.push({ type: 'packaging', product_id: bagId, qty: 1 })
+    return out
   }
 
-  // costo estimado por renglón (lo calcula la base de datos)
+  // costo estimado y precio sugerido de TODO el pedido (lo calcula la base de datos)
   useEffect(() => {
-    const ready = lines.filter((l) => (l.type === 'custom' ? true : l.productId) && isPositiveNumber(l.qty))
-    if (ready.length !== lines.length || lines.length === 0) {
-      setEst([])
+    const ready = lines.every((l) => (l.type === 'custom' ? l.description.trim() !== '' : l.productId !== '') && isPositiveNumber(l.qty))
+    if (!ready || lines.length === 0) {
+      setEstTotal(null)
+      setSuggest(null)
       return
     }
     const t = window.setTimeout(async () => {
-      const { data, error } = await supabase.rpc('estimate_lines', {
-        p_lines: payload().map((p) => ({ ...p, qty: p.qty })),
-      })
-      if (!error && Array.isArray(data)) setEst((data as unknown[]).map((x) => Number(x)))
+      const p = payload()
+      const [e, s] = await Promise.all([
+        supabase.rpc('estimate_lines', { p_lines: p }),
+        supabase.rpc('suggest_order_price', { p_lines: p, p_include_card: withCard }),
+      ])
+      if (!e.error && Array.isArray(e.data)) setEstTotal((e.data as unknown[]).reduce<number>((a, v) => a + Number(v), 0))
+      if (!s.error && s.data) setSuggest(Number((s.data as { suggested_price: number }).suggested_price))
     }, 400)
     return () => window.clearTimeout(t)
-  }, [lines])
+  }, [lines, bagId, withCard])
 
   function setLine(key: string, patch: Partial<DraftLine>) {
     setLines(lines.map((l) => (l.key === key ? { ...l, ...patch } : l)))
   }
-  function addLine(type: DraftLine['type']) {
-    setLines([
-      ...lines,
-      { key: crypto.randomUUID(), type, productId: '', description: '', qty: '1', price: type === 'packaging' ? '0' : '', unitCost: '0', custom: false, comps: [] },
-    ])
+  function addLine(type: 'product' | 'custom') {
+    setLines([...lines, { key: crypto.randomUUID(), type, productId: '', description: '', qty: '1', price: '', unitCost: '0', custom: false, comps: [] }])
   }
-  function pickProduct(key: string, id: string) {
-    const p = byId.get(id)
-    const ref = p?.current_price ?? p?.suggested_price ?? null
-    setLines(lines.map((l) => (l.key === key ? { ...l, productId: id, price: l.price !== '' || ref === null ? l.price : String(ref) } : l)))
+  // Al elegir un ramo/arreglo, sus piezas de la receta aparecen para que las cambies
+  async function pickProduct(key: string, id: string) {
+    setLine(key, { productId: id, comps: [] })
+    if (!id || !isGroup(id)) return
+    const { data } = await supabase.rpc('product_cost', { p_product_id: id })
+    const pieces = ((data as { lines?: { type: string; id: string; qty: number }[] } | null)?.lines ?? [])
+      .filter((x) => x.type === 'product')
+      .map((x) => ({ productId: x.id, qty: String(x.qty) }))
+    setLines((cur) => cur.map((l) => (l.key === key && l.productId === id ? { ...l, comps: pieces } : l)))
   }
 
-  const total = lines.reduce((a, l) => a.plus(D(l.price).times(D(l.qty))), new Decimal(0))
-  const estTotal = est.length === lines.length ? est.reduce((a, v) => a.plus(v), new Decimal(0)) : null
+  const totalD = D(total)
+  const profit = estTotal === null ? null : totalD.minus(estTotal)
+  const margin = profit && totalD.gt(0) ? profit.div(totalD).times(100) : null
 
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (!customer.trim()) return setError('Escribe el nombre del cliente.')
-    if (lines.length === 0) return setError('Agrega al menos un renglón.')
+    if (lines.length === 0) return setError('Agrega al menos un producto.')
+    if (!isNonNegativeNumber(total)) return setError('Escribe el precio total del pedido.')
     for (const l of lines) {
       if (l.type !== 'custom' && !l.productId) return setError('Hay un renglón sin producto.')
       if (l.type === 'custom' && !l.description.trim()) return setError('Un renglón libre necesita descripción.')
       if (!isPositiveNumber(l.qty)) return setError('Las cantidades deben ser mayores a 0.')
-      if (!isNonNegativeNumber(l.price)) return setError('Escribe el precio de cada renglón (puede ser 0 en una bolsa).')
-      if (l.type === 'product' && l.custom) {
-        if (l.comps.length === 0) return setError('Un ramo personalizado necesita sus piezas.')
-        for (const c of l.comps) if (!c.productId || !isPositiveNumber(c.qty)) return setError('Revisa las piezas del ramo personalizado.')
+      if (l.type === 'product' && isGroup(l.productId)) {
+        if (l.comps.length === 0) return setError(`Agrega las piezas de ${byId.get(l.productId)?.name ?? 'el ramo'}.`)
+        for (const c of l.comps) if (!c.productId || !isPositiveNumber(c.qty)) return setError('Revisa las piezas del ramo.')
       }
     }
     setBusy(true)
@@ -222,6 +239,7 @@ function OrderForm(props: { order: Summary | null; products: ProductOpt[]; onSav
       p_due: due || null,
       p_notes: notes.trim() || null,
       p_lines: payload(),
+      p_total: total,
     })
     setBusy(false)
     if (error) return setError(friendlyError(error.message))
@@ -249,23 +267,21 @@ function OrderForm(props: { order: Summary | null; products: ProductOpt[]; onSav
             </Field>
           </div>
 
-          <h3>Renglones</h3>
-          {lines.map((l, i) => {
-            const p = byId.get(l.productId)
-            const lineTotal = D(l.price).times(D(l.qty))
-            const cost = est[i]
+          <h3>¿Qué lleva el pedido?</h3>
+          {lines.map((l) => {
+            const group = l.type === 'product' && isGroup(l.productId)
             return (
               <div key={l.key} className="group-card" style={{ margin: '8px 0', padding: '8px 12px' }}>
-                <div className="grid3">
+                <div className="grid2">
                   {l.type === 'custom' ? (
-                    <Field label="Descripción (ej. envío)">
+                    <Field label="Concepto extra (ej. envío)">
                       <input value={l.description} onChange={(e) => setLine(l.key, { description: e.target.value })} />
                     </Field>
                   ) : (
-                    <Field label={l.type === 'packaging' ? 'Bolsa / empaque' : 'Producto'}>
+                    <Field label="Producto">
                       <select value={l.productId} onChange={(e) => pickProduct(l.key, e.target.value)}>
                         <option value="">Elegir...</option>
-                        {(l.type === 'packaging' ? bags : goods).map((x) => (
+                        {goods.map((x) => (
                           <option key={x.id} value={x.id}>
                             {x.name}
                             {x.has_recipe === false ? ' (sin receta)' : ''}
@@ -277,27 +293,15 @@ function OrderForm(props: { order: Summary | null; products: ProductOpt[]; onSav
                   <Field label="Cantidad">
                     <input inputMode="decimal" value={l.qty} onChange={(e) => setLine(l.key, { qty: e.target.value })} />
                   </Field>
-                  <Field label="Precio c/u (tú lo decides)">
-                    <input inputMode="decimal" value={l.price} onChange={(e) => setLine(l.key, { price: e.target.value })} />
-                  </Field>
                 </div>
                 {l.type === 'custom' && (
-                  <Field label="Costo c/u para ti (opcional, para calcular tu utilidad)">
+                  <Field label="Lo que te cuesta a ti (opcional, para calcular tu utilidad)">
                     <input inputMode="decimal" value={l.unitCost} onChange={(e) => setLine(l.key, { unitCost: e.target.value })} />
                   </Field>
                 )}
-                {l.type === 'product' && (
-                  <label className="inline">
-                    <input
-                      type="checkbox"
-                      checked={l.custom}
-                      onChange={(e) => setLine(l.key, { custom: e.target.checked, comps: e.target.checked && l.comps.length === 0 ? [{ productId: '', qty: '1' }] : l.comps })}
-                    />{' '}
-                    Ramo personalizado (elijo sus piezas)
-                  </label>
-                )}
-                {l.type === 'product' && l.custom && (
-                  <div style={{ marginTop: 8 }}>
+                {group && (
+                  <div style={{ marginTop: 4 }}>
+                    <span className="label">Piezas del ramo (cámbialas a lo que pidió el cliente)</span>
                     {l.comps.map((c, ci) => (
                       <div key={ci} className="inline-form">
                         <select value={c.productId} onChange={(e) => setLine(l.key, { comps: l.comps.map((k, j) => (j === ci ? { ...k, productId: e.target.value } : k)) })}>
@@ -324,17 +328,6 @@ function OrderForm(props: { order: Summary | null; products: ProductOpt[]; onSav
                     </button>
                   </div>
                 )}
-                <p className="hint">
-                  {p && (p.current_price != null || p.suggested_price != null) && l.type === 'product'
-                    ? `Referencia ${money(p.current_price ?? p.suggested_price, 0)} c/u · `
-                    : ''}
-                  Subtotal {money(lineTotal.toFixed(2))}
-                  {cost !== undefined && (
-                    <>
-                      {' '}· Costo estimado {money(cost)} · Utilidad {money(lineTotal.minus(cost).toFixed(2))}
-                    </>
-                  )}
-                </p>
                 <div className="actions left">
                   <button type="button" onClick={() => setLines(lines.filter((x) => x.key !== l.key))}>
                     Quitar renglón
@@ -347,31 +340,52 @@ function OrderForm(props: { order: Summary | null; products: ProductOpt[]; onSav
             <button type="button" onClick={() => addLine('product')}>
               + Producto
             </button>
-            <button type="button" onClick={() => addLine('packaging')}>
-              + Bolsa
-            </button>
             <button type="button" onClick={() => addLine('custom')}>
-              + Renglón libre (envío, etc.)
+              + Concepto extra (envío, etc.)
             </button>
           </div>
+
+          <Field label="Empaque (una bolsa por pedido; su costo siempre cuenta y está incluido en el precio)">
+            <select value={bagId} onChange={(e) => setBagId(e.target.value)}>
+              <option value="">Sin empaque</option>
+              {bags.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <h3>Precio del pedido</h3>
           <ul className="kv">
             <li>
-              <span>Total para el cliente</span>
-              <b>{money(total.toFixed(2))}</b>
+              <span>Costo estimado (materiales + tu mano de obra + empaque)</span>
+              <b>{estTotal === null ? '—' : money(estTotal)}</b>
             </li>
-            {estTotal && (
-              <>
-                <li>
-                  <span>Costo estimado (incluye tu mano de obra)</span>
-                  <b>{money(estTotal.toFixed(2))}</b>
-                </li>
-                <li>
-                  <span>Utilidad estimada</span>
-                  <b>{money(total.minus(estTotal).toFixed(2))}</b>
-                </li>
-              </>
-            )}
+            <li>
+              <span>Precio sugerido con tu ganancia</span>
+              <b>
+                {suggest === null ? '—' : money(suggest)}{' '}
+                {suggest !== null && (
+                  <button type="button" onClick={() => setTotal(String(suggest))}>
+                    Usar
+                  </button>
+                )}
+              </b>
+            </li>
           </ul>
+          <label className="inline">
+            <input type="checkbox" checked={withCard} onChange={(e) => setWithCard(e.target.checked)} /> Incluir comisión de tarjeta en el sugerido
+          </label>
+          <Field label="Precio total del pedido que le das al cliente">
+            <input inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value)} />
+          </Field>
+          {profit && (
+            <p className="hint">
+              Tu utilidad con este precio: <b>{money(profit.toFixed(2))}</b>
+              {margin ? ` (${margin.toFixed(0)}% del precio)` : ''}. Incluye el pago de tus horas dentro del costo.
+            </p>
+          )}
           <ErrorBox message={error} />
           <div className="actions">
             <button type="button" onClick={props.onClose}>
@@ -568,8 +582,6 @@ function OrderDetail(props: { order: Summary; products: ProductOpt[]; methods: M
             <tr>
               <th>Concepto</th>
               <th>Cant.</th>
-              <th>Precio</th>
-              <th>Importe</th>
             </tr>
           </thead>
           <tbody>
@@ -586,12 +598,10 @@ function OrderDetail(props: { order: Summary; products: ProductOpt[]; methods: M
                   {o.status === 'confirmed' && <div className="muted small">{availability(l)}</div>}
                 </td>
                 <td>{l.qty}</td>
-                <td>{money(l.unit_price)}</td>
-                <td>{money(l.line_total)}</td>
               </tr>
             ))}
             <tr>
-              <th colSpan={3}>Total</th>
+              <th>Precio del pedido</th>
               <th>{money(o.total)}</th>
             </tr>
           </tbody>
