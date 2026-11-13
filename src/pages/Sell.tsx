@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import Decimal from 'decimal.js'
-import { supabase } from '../supabase'
-import { friendlyError, isNonNegativeNumber, money } from '../format'
+import { isNonNegativeNumber, money } from '../format'
+import { enqueueSale, loadRefData, syncOutbox } from '../offline'
+import type { RefMethod, RefRate, RefTier, RefYarn } from '../offline'
 import { ErrorBox } from '../ui'
 
 export interface EventProduct {
@@ -11,30 +12,6 @@ export interface EventProduct {
   price: number
   qty_brought: number
   qty_remaining: number
-}
-interface YarnItem {
-  id: string
-  name: string
-  brand: string | null
-  color: string | null
-  price_group_id: string | null
-}
-interface Tier {
-  group_id: string
-  min_qty: number
-  unit_price: number
-}
-interface Method {
-  id: string
-  code: string
-  name: string
-  kind: string
-}
-interface FeeRate {
-  payment_method_id: string
-  pct: number
-  fixed_fee: number
-  vat_on_fee: boolean
 }
 interface Row {
   key: string
@@ -64,10 +41,10 @@ export default function Sell(props: {
   onSold: () => void
   onClose: () => void
 }) {
-  const [methods, setMethods] = useState<Method[]>([])
-  const [rates, setRates] = useState<FeeRate[]>([])
-  const [yarn, setYarn] = useState<YarnItem[]>([])
-  const [tiers, setTiers] = useState<Tier[]>([])
+  const [methods, setMethods] = useState<RefMethod[]>([])
+  const [rates, setRates] = useState<RefRate[]>([])
+  const [yarn, setYarn] = useState<RefYarn[]>([])
+  const [tiers, setTiers] = useState<RefTier[]>([])
   const [rows, setRows] = useState<Row[]>([])
   const [yarnRows, setYarnRows] = useState<YarnRow[]>([])
   const [bagId, setBagId] = useState('')
@@ -83,24 +60,17 @@ export default function Sell(props: {
   const [clientId, setClientId] = useState(() => crypto.randomUUID())
 
   useEffect(() => {
-    Promise.all([
-      supabase.from('payment_methods').select('id, code, name, kind').eq('is_active', true).order('sort_order'),
-      supabase.from('v_payment_method_current_rate').select('payment_method_id, pct, fixed_fee, vat_on_fee'),
-      supabase.from('items').select('id, name, brand, color, price_group_id').eq('kind', 'resale').eq('is_active', true).order('color'),
-      supabase.from('v_group_prices_current').select('group_id, min_qty, unit_price').eq('audience', 'customer'),
-    ]).then(([m, r, y, t]) => {
-      if (m.error) setError(friendlyError(m.error.message))
-      else {
-        const list = (m.data ?? []) as Method[]
-        setMethods(list)
-        setMethodId(list.find((x) => x.kind === 'cash')?.id ?? list[0]?.id ?? '')
-      }
-      if (!r.error) setRates((r.data ?? []) as FeeRate[])
-      if (!y.error) setYarn((y.data ?? []) as YarnItem[])
-      if (!t.error) setTiers((t.data ?? []) as Tier[])
+    loadRefData().then(({ data }) => {
+      if (!data) return setError('Falta cargar los datos de venta: abre la app con internet al menos una vez.')
+      setMethods(data.methods)
+      setRates(data.rates)
+      setYarn(data.yarn)
+      setTiers(data.tiers)
+      setMethodId(data.methods.find((x) => x.kind === 'cash')?.id ?? data.methods[0]?.id ?? '')
     })
   }, [])
 
+  const yarnName = useMemo(() => new Map(yarn.map((i) => [i.id, [i.name, i.brand, i.color].filter(Boolean).join(' · ')])), [yarn])
   const bags = props.products.filter((p) => p.kind === 'packaging')
   const goods = props.products.filter((p) => p.kind !== 'packaging')
   const method = methods.find((m) => m.id === methodId)
@@ -167,21 +137,35 @@ export default function Sell(props: {
       ...yarnRows.map((y) => ({ type: 'item', item_id: y.itemId, qty: y.qty })),
     ]
     if (bagId) lines.push({ type: 'packaging', product_id: bagId, qty: 1, unit_price: bagPrice, delivered: bagDelivered })
-    const { error } = await supabase.rpc('register_sale', {
-      p_event_id: props.eventId,
-      p_payment_method_id: methodId,
-      p_lines: lines,
-      p_note: note.trim() || null,
-      p_client_uuid: clientId,
-    })
+    const summary = [
+      ...rows.map((r) => `${r.qty}× ${r.name}`),
+      ...yarnRows.map((y) => `${y.qty}× ${yarnName.get(y.itemId) ?? 'estambre'}`),
+      ...(bagId ? ['bolsa'] : []),
+    ].join(', ')
+    try {
+      // Primero se guarda en este dispositivo (nunca se pierde); luego se intenta enviar.
+      await enqueueSale({
+        client_uuid: clientId,
+        total: Number(total.toFixed(2)),
+        event_id: props.eventId,
+        event_name: props.eventName,
+        payment_method_id: methodId,
+        sold_at: new Date().toISOString(),
+        note: note.trim() || null,
+        lines,
+        summary,
+      })
+    } catch {
+      setBusy(false)
+      return setError('No se pudo guardar la venta en este dispositivo. No entregues sin anotarla.')
+    }
     setBusy(false)
-    if (error) return setError(friendlyError(error.message))
     setLastOk(`Venta guardada: ${money(total.toFixed(2))}`)
     reset()
     props.onSold()
+    void syncOutbox().then(() => props.onSold())
   }
 
-  const yarnName = useMemo(() => new Map(yarn.map((i) => [i.id, [i.name, i.brand, i.color].filter(Boolean).join(' · ')])), [yarn])
 
   return (
     <div className="modal-back" style={{ alignItems: 'stretch', padding: 8 }}>

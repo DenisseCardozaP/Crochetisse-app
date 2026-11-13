@@ -1,3 +1,45 @@
+# ACTUALIZACIÓN 6 · Venta sin internet en la iPad (Etapa 4b) + script de reinicio
+
+Qué trae:
+- La app ahora se instala en la iPad (pantalla de inicio) y abre SIN internet, igual que la prueba de la Etapa 0.
+- Pestaña "Vender" (primera): muestra tus bazares abiertos y vende desde ellos. Cada venta se guarda PRIMERO en la iPad
+  (nunca se pierde) y luego se envía sola cuando hay internet (al abrir, al volver la señal, cada 30 segundos o con
+  "Enviar ahora"). Si el envío se repite, no se duplica.
+- Las piezas que quedan se descuentan en la iPad aunque aún no se hayan enviado.
+- Si el servidor rechaza una venta (por ejemplo, el bazar ya estaba cerrado) aparece en "Ventas con error" con el motivo,
+  para reintentar o descartar. No se descuenta inventario hasta que se acepte.
+- "Respaldo de ventas": exporta un archivo con todas las ventas de la iPad (se conservan 30 días aunque ya estén enviadas).
+- No hay migración nueva en esta entrega: solo se sube la app.
+
+Pasos:
+1. Sube la carpeta a GitHub (incluye `src`, `public`, `package.json`, `vite.config.ts` e `index.html`). Vercel instala las
+   dos piezas nuevas (dexie y vite-plugin-pwa) solo. Espera a que Vercel diga "Ready".
+2. En la iPad, abre la dirección de la app en Safari CON internet, inicia sesión y entra a "Vender" una vez (así guarda
+   tus bazares, productos, precios y formas de pago). Compartir > "Añadir a pantalla de inicio".
+3. Abre la app desde el ícono nuevo. En "Vender" pulsa "Pedir almacenamiento seguro" si aparece.
+
+PRUEBA ANTES DE UN BAZAR REAL (como la Etapa 0):
+- Crea un bazar de prueba con productos (pestaña Bazares) y ábrelo en "Vender" con internet.
+- Pon la iPad en modo avión, cierra la app por completo y ábrela otra vez: debe abrir y mostrar el bazar.
+- Haz 3 ventas sin internet (una con bolsa, una con tarjeta, una con estambre). Deben mostrarse como "pendiente".
+- Quita el modo avión: en segundos deben pasar a "enviada". En Bazares > tu bazar deben aparecer una sola vez cada una.
+- Prueba "Respaldo de ventas".
+
+Si abres la app sin internet por primera vez después de reinstalarla o de borrar datos de Safari, no tendrá tus bazares
+guardados: siempre abre "Vender" con internet un rato antes de salir al bazar.
+
+# REINICIO DE DATOS DE PRUEBA (cuando termines de probar)
+
+`supabase/reset_datos_de_prueba.sql` borra ventas, bazares, producción, compras, inventario, productos y recetas de
+prueba, y conserva tu configuración, comisiones, grupos de precio y tu estambre Alize Velluto (112 madejas, con su costo).
+- Antes: saca un respaldo. Si ya capturaste insumos o productos REALES que quieras conservar, escribe sus nombres exactos en
+  las dos listas que están al inicio del archivo (instrucciones dentro). Si no, córrelo tal cual.
+- Se corre una vez en Supabase > SQL Editor. Si algo no cuadra, se cancela completo y no cambia nada.
+- Después de correrlo, limpia también la iPad: en "Vender" haz "Respaldo de ventas" y borra los datos del sitio en Safari
+  (Ajustes > Safari > Avanzado > Datos de sitios web) para quitar ventas de prueba pendientes.
+
+---
+
 # ACTUALIZACIÓN 5 · Bazares y ventas (Etapa 4a)
 
 Qué trae:

@@ -13,13 +13,31 @@ import Purchases from './pages/Purchases'
 import Inventory from './pages/Inventory'
 import Production from './pages/Production'
 import Events from './pages/Events'
+import Pos from './pages/Pos'
 
 export interface Profile {
   role: 'owner' | 'collaborator'
   display_name: string | null
 }
 
-type Tab = 'items' | 'prices' | 'products' | 'purchases' | 'inventory' | 'production' | 'events' | 'catalogs' | 'settings'
+const LOGIN_KEY = 'amigurumis_login'
+
+interface SavedLogin {
+  id: string
+  email: string
+  profile: Profile
+}
+
+function readSavedLogin(): SavedLogin | null {
+  try {
+    const raw = localStorage.getItem(LOGIN_KEY)
+    return raw ? (JSON.parse(raw) as SavedLogin) : null
+  } catch {
+    return null
+  }
+}
+
+type Tab = 'items' | 'prices' | 'products' | 'purchases' | 'inventory' | 'production' | 'events' | 'pos' | 'catalogs' | 'settings'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -64,8 +82,8 @@ function Login() {
   )
 }
 
-function Shell({ session, profile }: { session: Session; profile: Profile }) {
-  const [tab, setTab] = useState<Tab>('items')
+function Shell({ email, profile }: { email: string; profile: Profile }) {
+  const [tab, setTab] = useState<Tab>(navigator.onLine ? 'items' : 'pos')
   const isOwner = profile.role === 'owner'
 
   return (
@@ -73,6 +91,9 @@ function Shell({ session, profile }: { session: Session; profile: Profile }) {
       <header className="topbar">
         <strong className="brand">Amigurumis</strong>
         <nav>
+          <button className={tab === 'pos' ? 'tab active' : 'tab'} onClick={() => setTab('pos')}>
+            Vender
+          </button>
           <button className={tab === 'items' ? 'tab active' : 'tab'} onClick={() => setTab('items')}>
             Insumos
           </button>
@@ -102,10 +123,18 @@ function Shell({ session, profile }: { session: Session; profile: Profile }) {
           </button>
         </nav>
         <span className="spacer" />
-        <span className="muted small">{session.user.email}</span>
-        <button onClick={() => supabase.auth.signOut()}>Salir</button>
+        <span className="muted small">{email}</span>
+        <button
+          onClick={() => {
+            localStorage.removeItem(LOGIN_KEY)
+            supabase.auth.signOut()
+          }}
+        >
+          Salir
+        </button>
       </header>
       <main className="content">
+        {tab === 'pos' && <Pos />}
         {tab === 'items' && <Items />}
         {tab === 'prices' && <PriceGroups isOwner={isOwner} />}
         {tab === 'products' && <Products isOwner={isOwner} />}
@@ -125,12 +154,17 @@ export default function App() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [profileError, setProfileError] = useState('')
+  // Sin conexión la sesión puede no renovarse; si ya iniciaste sesión antes en este dispositivo, se sigue usando lo guardado.
+  const [saved] = useState<SavedLogin | null>(() => readSavedLogin())
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
-      if (!data.session) setLoading(false)
-    })
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session)
+        if (!data.session) setLoading(false)
+      })
+      .catch(() => setLoading(false))
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s)
       if (!s) {
@@ -153,8 +187,14 @@ export default function App() {
       .maybeSingle()
       .then(({ data, error }) => {
         if (!alive) return
-        if (error) setProfileError(friendlyError(error.message))
-        else setProfile((data as Profile | null) ?? null)
+        if (error) {
+          if (saved && saved.id === userId) setProfile(saved.profile)
+          else setProfileError(friendlyError(error.message))
+        } else {
+          const p = (data as Profile | null) ?? null
+          setProfile(p)
+          if (p && session) localStorage.setItem(LOGIN_KEY, JSON.stringify({ id: userId, email: session.user.email ?? '', profile: p }))
+        }
         setLoading(false)
       })
     return () => {
@@ -163,7 +203,11 @@ export default function App() {
   }, [userId])
 
   if (loading) return <p className="muted center">Cargando...</p>
-  if (!session) return <Login />
+  if (!session) {
+    // Sin conexión y con sesión guardada: se puede vender con lo guardado en el dispositivo.
+    if (saved && !navigator.onLine) return <Shell email={saved.email} profile={saved.profile} />
+    return <Login />
+  }
   if (!profile) {
     return (
       <div className="login">
@@ -174,5 +218,5 @@ export default function App() {
       </div>
     )
   }
-  return <Shell session={session} profile={profile} />
+  return <Shell email={session.user.email ?? ''} profile={profile} />
 }
