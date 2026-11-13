@@ -20,6 +20,7 @@ import Earnings from './pages/Earnings'
 import Dashboard from './pages/Dashboard'
 import WhatToBring from './pages/WhatToBring'
 import Backup from './pages/Backup'
+import Logo from './Logo'
 
 export interface Profile {
   role: 'owner' | 'collaborator'
@@ -79,7 +80,8 @@ function Login() {
 
   return (
     <div className="login">
-      <h1>Amigurumis</h1>
+      <Logo className="logo" />
+      <h1>crochetisse</h1>
       <p className="muted">Inicia sesión para administrar tu negocio.</p>
       <form onSubmit={submit}>
         <input
@@ -136,12 +138,17 @@ function Shell({ email, profile }: { email: string; profile: Profile }) {
         <button onClick={() => setMenu(true)} aria-label="Abrir menú">
           ☰
         </button>
-        <span className="brand">Amigurumis</span>
+        <span className="brandrow">
+          <Logo className="logo" />
+          <span className="brand">crochetisse</span>
+        </span>
       </div>
       <div className={menu ? 'scrim open' : 'scrim'} onClick={() => setMenu(false)} />
       <aside className={menu ? 'sidebar open' : 'sidebar'}>
-        <div className="brand">Amigurumis</div>
-        <div className="brand-sub">Hecho a mano</div>
+        <div className="brandrow">
+          <Logo className="logo" />
+          <span className="brand">crochetisse</span>
+        </div>
         {groups.map((g) => {
           const items = g.items.filter((i) => !i.owner || isOwner)
           if (items.length === 0) return null
@@ -156,7 +163,6 @@ function Shell({ email, profile }: { email: string; profile: Profile }) {
             </div>
           )
         })}
-        <div className="side-checker" />
         <div className="side-foot">
           {email}
           <button

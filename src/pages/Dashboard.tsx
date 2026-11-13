@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { friendlyError, money, todayMX } from '../format'
 import { ErrorBox } from '../ui'
+import Logo from '../Logo'
 import { TAG_LABEL, toReco } from './WhatToBring'
 import { lastBackup } from './Backup'
 import type { Reco } from './WhatToBring'
@@ -121,13 +122,12 @@ export default function Dashboard({ isOwner, onGo }: { isOwner: boolean; onGo: (
   return (
     <div>
       <div className="hero">
+        <Logo className="logo" />
         <div>
           <h1>¡Hola! 🌸</h1>
           <p>Esto es lo que necesita tu atención hoy.</p>
           <span className="date-pill">{new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Mexico_City' })}</span>
         </div>
-        <div className="checker two" />
-        <div className="checker" />
       </div>
       {isOwner && backupDays !== null && backupDays > 7 && (
         <div className="alert-banner">
