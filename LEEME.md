@@ -1,3 +1,15 @@
+# ACTUALIZACIÓN 10 · Negocio y nómina separados + corrección de mermas
+
+- Dos pestañas: "Finanzas del negocio" (ventas, materiales, mesas, gastos, mermas, tu sueldo, utilidad, lo que se reparte y lo que se queda en el negocio) y "Mi nómina" (mano de obra + tu parte de utilidad, retiros y saldo).
+- Corrección: las mermas solo cuentan pérdidas. Un ajuste de inventario que SUMA existencia ya no se cuenta como ganancia.
+- Selector "Todos los años": el saldo de arriba suma todos los años, así que ahora puedes ver la tabla completa y que cuadre.
+
+Pasos:
+1. Supabase > SQL Editor > New query > pega TODO `supabase/0010_mermas_solo_perdidas.sql` > Run. UNA sola vez.
+2. Sube la carpeta a GitHub (incluye `src`).
+
+---
+
 # ACTUALIZACIÓN 9 · Gastos y ganancias (Etapa 6)
 
 Qué trae:

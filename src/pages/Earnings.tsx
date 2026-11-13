@@ -162,9 +162,9 @@ function NewWithdrawal(props: { suggested: number; onSaved: () => void; onClose:
   )
 }
 
-export default function Earnings() {
+export default function Earnings({ view }: { view: 'business' | 'payroll' }) {
   const [grain, setGrain] = useState<Grain>('quincena')
-  const [year, setYear] = useState(Number(todayMX().slice(0, 4)))
+  const [year, setYear] = useState<number | 'all'>(Number(todayMX().slice(0, 4)))
   const [periods, setPeriods] = useState<Period[]>([])
   const [balance, setBalance] = useState<Balance | null>(null)
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([])
@@ -176,10 +176,12 @@ export default function Earnings() {
 
   const load = useCallback(async () => {
     setError('')
+    const from = year === 'all' ? '2000-01-02' : `${year}-01-01`
+    const to = year === 'all' ? '2100-12-31' : `${year}-12-31`
     const [p, b, w] = await Promise.all([
-      supabase.rpc('earnings_periods', { p_grain: grain, p_from: `${year}-01-01`, p_to: `${year}-12-31` }),
+      supabase.rpc('earnings_periods', { p_grain: grain, p_from: from, p_to: to }),
       supabase.rpc('withdrawal_balance', { p_to: todayMX() }),
-      supabase.rpc('list_withdrawals', { p_from: `${year}-01-01`, p_to: `${year}-12-31` }),
+      supabase.rpc('list_withdrawals', { p_from: from, p_to: to }),
     ])
     const err = p.error ?? b.error ?? w.error
     if (err) {
@@ -213,29 +215,38 @@ export default function Earnings() {
       wd: a.wd + p.withdrawn,
       labor: a.labor + p.labor,
       share: a.share + p.her_share,
+      materials: a.materials + p.materials,
+      tables: a.tables + p.expense_event,
+      other: a.other + p.expense_other,
+      shrink: a.shrink + p.shrink,
+      kept: a.kept + p.business_share,
     }),
-    { net: 0, utility: 0, due: 0, wd: 0, labor: 0, share: 0 },
+    { net: 0, utility: 0, due: 0, wd: 0, labor: 0, share: 0, materials: 0, tables: 0, other: 0, shrink: 0, kept: 0 },
   )
 
   return (
     <div>
       <div className="section-head">
-        <h2>Ganancias</h2>
-        <button className="primary" onClick={() => setWithdrawing(true)}>
-          Registrar retiro
-        </button>
+        <h2>{view === 'business' ? 'Finanzas del negocio' : 'Mi nómina'}</h2>
+        {view === 'payroll' && (
+          <button className="primary" onClick={() => setWithdrawing(true)}>
+            Registrar retiro
+          </button>
+        )}
       </div>
       <p className="muted small">
-        Solo cuenta lo concretado: ventas cobradas y pedidos entregados y pagados por completo (los anticipos no cuentan todavía). Tu retiro = tu mano de obra + tu parte de la utilidad.
+        {view === 'business'
+          ? 'Cómo le va al negocio. Solo cuenta lo concretado: ventas cobradas y pedidos entregados y pagados por completo (los anticipos no cuentan todavía). Tu mano de obra se muestra como sueldo, igual que cualquier negocio paga a su trabajadora.'
+          : 'Lo que te toca a ti: tu mano de obra (horas × tarifa) más tu parte de la utilidad del negocio. Solo cuenta lo concretado.'}
       </p>
       <ErrorBox message={error} />
       <OkBox message={ok} />
-      {balance && (
+      {view === 'payroll' && balance && (
         <div className="table-wrap">
           <table className="table">
             <tbody>
               <tr>
-                <td>Te corresponde en total (hasta hoy)</td>
+                <td>Te corresponde en total (de todos los años, hasta hoy)</td>
                 <td>{money(balance.total_due)}</td>
               </tr>
               <tr>
@@ -260,7 +271,8 @@ export default function Earnings() {
           <option value="month">Por mes</option>
           <option value="year">Por año</option>
         </select>
-        <select value={year} onChange={(e) => setYear(Number(e.target.value))}>
+        <select value={year} onChange={(e) => setYear(e.target.value === 'all' ? 'all' : Number(e.target.value))}>
+          <option value="all">Todos los años</option>
           {Array.from({ length: 6 }, (_, i) => Number(todayMX().slice(0, 4)) + 1 - i).map((y) => (
             <option key={y}>{y}</option>
           ))}
@@ -268,73 +280,128 @@ export default function Earnings() {
       </div>
       {loading ? (
         <p className="muted">Cargando...</p>
+      ) : view === 'business' ? (
+        <>
+          <div className="table-wrap">
+            <table className="table clickable">
+              <thead>
+                <tr>
+                  <th>Periodo</th>
+                  <th>Ventas netas</th>
+                  <th>Materiales</th>
+                  <th>Mesas de bazar</th>
+                  <th>Otros gastos</th>
+                  <th>Mermas</th>
+                  <th>Sueldo (tu mano de obra)</th>
+                  <th>Utilidad del negocio</th>
+                  <th>Se reparte (tu parte)</th>
+                  <th>Se queda en el negocio</th>
+                </tr>
+              </thead>
+              <tbody>
+                {periods.map((p) => (
+                  <tr key={p.period_start} onClick={() => setDetail(p)}>
+                    <td>{label(p, grain)}</td>
+                    <td>{money(p.net_sales)}</td>
+                    <td>{money(p.materials)}</td>
+                    <td>{money(p.expense_event)}</td>
+                    <td>{money(p.expense_other)}</td>
+                    <td>{money(p.shrink)}</td>
+                    <td>{money(p.labor)}</td>
+                    <td style={p.utility < 0 ? { color: '#b3261e' } : undefined}>
+                      <b>{money(p.utility)}</b>
+                    </td>
+                    <td>{money(p.her_share)}</td>
+                    <td>{money(p.business_share)}</td>
+                  </tr>
+                ))}
+                {periods.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="muted">
+                      Sin movimientos en este periodo.
+                    </td>
+                  </tr>
+                )}
+                {periods.length > 1 && (
+                  <tr>
+                    <td>
+                      <b>Total</b>
+                    </td>
+                    <td>{money(tot.net)}</td>
+                    <td>{money(tot.materials)}</td>
+                    <td>{money(tot.tables)}</td>
+                    <td>{money(tot.other)}</td>
+                    <td>{money(tot.shrink)}</td>
+                    <td>{money(tot.labor)}</td>
+                    <td>
+                      <b>{money(tot.utility)}</b>
+                    </td>
+                    <td>{money(tot.share)}</td>
+                    <td>{money(tot.kept)}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <p className="muted small">
+            Utilidad del negocio = ventas netas − materiales − mesas − gastos − mermas − tu sueldo. Se reparte por mitad: tu parte pasa a tu nómina y la otra mitad se queda en el negocio para reinvertir. Las mermas son solo pérdidas (material o piezas que se echaron a perder); un ajuste que suma existencia no cuenta como ganancia. Toca un periodo para ver de dónde sale cada número.
+          </p>
+        </>
       ) : (
-        <div className="table-wrap">
-          <table className="table clickable">
-            <thead>
-              <tr>
-                <th>Periodo</th>
-                <th>Ventas netas</th>
-                <th>Costo (incluye tu mano de obra)</th>
-                <th>Gastos</th>
-                <th>Mermas</th>
-                <th>Utilidad</th>
-                <th>Tu mano de obra</th>
-                <th>Tu parte de la utilidad</th>
-                <th>A retirar</th>
-                <th>Retirado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {periods.map((p) => (
-                <tr key={p.period_start} onClick={() => setDetail(p)}>
-                  <td>{label(p, grain)}</td>
-                  <td>{money(p.net_sales)}</td>
-                  <td>{money(p.cogs)}</td>
-                  <td>{money(p.expense_event + p.expense_other)}</td>
-                  <td>{money(p.shrink)}</td>
-                  <td style={p.utility < 0 ? { color: '#b3261e' } : undefined}>{money(p.utility)}</td>
-                  <td>{money(p.labor)}</td>
-                  <td>{money(p.her_share)}</td>
-                  <td>
-                    <b>{money(p.withdrawal_due)}</b>
-                  </td>
-                  <td>{money(p.withdrawn)}</td>
-                </tr>
-              ))}
-              {periods.length === 0 && (
+        <>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
                 <tr>
-                  <td colSpan={10} className="muted">
-                    Sin movimientos en {year}.
-                  </td>
+                  <th>Periodo</th>
+                  <th>Mano de obra</th>
+                  <th>Parte de la utilidad</th>
+                  <th>Total de nómina</th>
+                  <th>Retirado</th>
                 </tr>
-              )}
-              {periods.length > 1 && (
-                <tr>
-                  <td>
-                    <b>Total {year}</b>
-                  </td>
-                  <td>{money(tot.net)}</td>
-                  <td />
-                  <td />
-                  <td />
-                  <td>{money(tot.utility)}</td>
-                  <td>{money(tot.labor)}</td>
-                  <td>{money(tot.share)}</td>
-                  <td>
-                    <b>{money(tot.due)}</b>
-                  </td>
-                  <td>{money(tot.wd)}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {periods.map((p) => (
+                  <tr key={p.period_start}>
+                    <td>{label(p, grain)}</td>
+                    <td>{money(p.labor)}</td>
+                    <td>{money(p.her_share)}</td>
+                    <td>
+                      <b>{money(p.withdrawal_due)}</b>
+                    </td>
+                    <td>{money(p.withdrawn)}</td>
+                  </tr>
+                ))}
+                {periods.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="muted">
+                      Sin movimientos en este periodo.
+                    </td>
+                  </tr>
+                )}
+                {periods.length > 1 && (
+                  <tr>
+                    <td>
+                      <b>Total</b>
+                    </td>
+                    <td>{money(tot.labor)}</td>
+                    <td>{money(tot.share)}</td>
+                    <td>
+                      <b>{money(tot.due)}</b>
+                    </td>
+                    <td>{money(tot.wd)}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <p className="muted small">
+            Si una quincena sale en pérdida, tu parte de utilidad es $0 pero tu mano de obra se paga igual. Con "Todos los años" la suma coincide con el saldo de arriba.
+          </p>
+        </>
       )}
-      <p className="muted small">
-        Toca un periodo para ver de dónde sale cada número. Si hay pérdida en una quincena, la absorbe el negocio: tu mano de obra se retira igual.
-      </p>
-      <h3>Retiros de {year}</h3>
+      {view === 'payroll' && (<>
+      <h3>Retiros {year === 'all' ? '(todos)' : year}</h3>
       <div className="table-wrap">
         <table className="table">
           <thead>
@@ -364,6 +431,7 @@ export default function Earnings() {
           </tbody>
         </table>
       </div>
+      </>)}
       {detail && <Detail period={detail} grain={grain} onClose={() => setDetail(null)} />}
       {withdrawing && (
         <NewWithdrawal

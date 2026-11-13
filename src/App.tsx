@@ -40,7 +40,7 @@ function readSavedLogin(): SavedLogin | null {
   }
 }
 
-type Tab = 'items' | 'prices' | 'products' | 'purchases' | 'inventory' | 'production' | 'events' | 'pos' | 'orders' | 'expenses' | 'earnings' | 'catalogs' | 'settings'
+type Tab = 'items' | 'prices' | 'products' | 'purchases' | 'inventory' | 'production' | 'events' | 'pos' | 'orders' | 'expenses' | 'earnings' | 'payroll' | 'catalogs' | 'settings'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -126,7 +126,12 @@ function Shell({ email, profile }: { email: string; profile: Profile }) {
           </button>
           {isOwner && (
             <button className={tab === 'earnings' ? 'tab active' : 'tab'} onClick={() => setTab('earnings')}>
-              Ganancias
+              Finanzas del negocio
+            </button>
+          )}
+          {isOwner && (
+            <button className={tab === 'payroll' ? 'tab active' : 'tab'} onClick={() => setTab('payroll')}>
+              Mi nómina
             </button>
           )}
           <button className={tab === 'catalogs' ? 'tab active' : 'tab'} onClick={() => setTab('catalogs')}>
@@ -158,7 +163,8 @@ function Shell({ email, profile }: { email: string; profile: Profile }) {
         {tab === 'events' && <Events />}
         {tab === 'orders' && <Orders />}
         {tab === 'expenses' && <Expenses />}
-        {tab === 'earnings' && isOwner && <Earnings />}
+        {tab === 'earnings' && isOwner && <Earnings view="business" />}
+        {tab === 'payroll' && isOwner && <Earnings view="payroll" />}
         {tab === 'catalogs' && <Catalogs />}
         {tab === 'settings' && <Settings isOwner={isOwner} />}
       </main>
