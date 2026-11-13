@@ -15,6 +15,8 @@ import Production from './pages/Production'
 import Events from './pages/Events'
 import Pos from './pages/Pos'
 import Orders from './pages/Orders'
+import Expenses from './pages/Expenses'
+import Earnings from './pages/Earnings'
 
 export interface Profile {
   role: 'owner' | 'collaborator'
@@ -38,7 +40,7 @@ function readSavedLogin(): SavedLogin | null {
   }
 }
 
-type Tab = 'items' | 'prices' | 'products' | 'purchases' | 'inventory' | 'production' | 'events' | 'pos' | 'orders' | 'catalogs' | 'settings'
+type Tab = 'items' | 'prices' | 'products' | 'purchases' | 'inventory' | 'production' | 'events' | 'pos' | 'orders' | 'expenses' | 'earnings' | 'catalogs' | 'settings'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -119,6 +121,14 @@ function Shell({ email, profile }: { email: string; profile: Profile }) {
           <button className={tab === 'production' ? 'tab active' : 'tab'} onClick={() => setTab('production')}>
             Producción
           </button>
+          <button className={tab === 'expenses' ? 'tab active' : 'tab'} onClick={() => setTab('expenses')}>
+            Gastos
+          </button>
+          {isOwner && (
+            <button className={tab === 'earnings' ? 'tab active' : 'tab'} onClick={() => setTab('earnings')}>
+              Ganancias
+            </button>
+          )}
           <button className={tab === 'catalogs' ? 'tab active' : 'tab'} onClick={() => setTab('catalogs')}>
             Proveedores y categorías
           </button>
@@ -147,6 +157,8 @@ function Shell({ email, profile }: { email: string; profile: Profile }) {
         {tab === 'production' && <Production />}
         {tab === 'events' && <Events />}
         {tab === 'orders' && <Orders />}
+        {tab === 'expenses' && <Expenses />}
+        {tab === 'earnings' && isOwner && <Earnings />}
         {tab === 'catalogs' && <Catalogs />}
         {tab === 'settings' && <Settings isOwner={isOwner} />}
       </main>

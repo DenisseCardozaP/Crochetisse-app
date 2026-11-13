@@ -1,3 +1,20 @@
+# ACTUALIZACIÓN 9 · Gastos y ganancias (Etapa 6)
+
+Qué trae:
+- Pestaña "Gastos": gasolina, publicidad, exhibidores, etc. (con bazar opcional). Se anulan, no se borran.
+- Pestaña "Ganancias" (solo la dueña): por quincena (1-15 y 16-fin), mes o año. Tocas un periodo y ves de dónde sale cada número.
+- Solo cuenta lo concretado: ventas de bazar/directas al cobrarse y pedidos entregados Y pagados completos (el anticipo no cuenta).
+- Utilidad = ventas netas − comisión − costo (que ya incluye tu mano de obra) − mesa y gastos − mermas (ajustes de inventario).
+- A retirar = tu mano de obra + tu 50% de la utilidad. Si una quincena sale en pérdida, la absorbe el negocio y tu mano de obra se retira igual.
+- Retiros: registras lo que te llevas y ves el saldo pendiente. Se anulan, no se borran.
+- La ganancia interna de pasar estambre a producción ($60 vs su costo) se ve en el detalle, pero NO entra a la utilidad.
+
+Pasos:
+1. Supabase > SQL Editor > New query > pega TODO `supabase/0009_ganancias_gastos.sql` > Run. "Success". UNA sola vez.
+2. Sube la carpeta a GitHub (incluye `src`). Vercel republica solo.
+
+---
+
 # ACTUALIZACIÓN 8 · Pedidos: precio del pedido completo + arreglos por pieza
 
 Cambios:
