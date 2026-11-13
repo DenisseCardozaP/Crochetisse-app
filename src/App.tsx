@@ -17,6 +17,8 @@ import Pos from './pages/Pos'
 import Orders from './pages/Orders'
 import Expenses from './pages/Expenses'
 import Earnings from './pages/Earnings'
+import Dashboard from './pages/Dashboard'
+import WhatToBring from './pages/WhatToBring'
 
 export interface Profile {
   role: 'owner' | 'collaborator'
@@ -40,7 +42,23 @@ function readSavedLogin(): SavedLogin | null {
   }
 }
 
-type Tab = 'items' | 'prices' | 'products' | 'purchases' | 'inventory' | 'production' | 'events' | 'pos' | 'orders' | 'expenses' | 'earnings' | 'payroll' | 'catalogs' | 'settings'
+type Tab =
+  | 'dashboard'
+  | 'bring'
+  | 'items'
+  | 'prices'
+  | 'products'
+  | 'purchases'
+  | 'inventory'
+  | 'production'
+  | 'events'
+  | 'pos'
+  | 'orders'
+  | 'expenses'
+  | 'earnings'
+  | 'payroll'
+  | 'catalogs'
+  | 'settings'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -86,73 +104,71 @@ function Login() {
 }
 
 function Shell({ email, profile }: { email: string; profile: Profile }) {
-  const [tab, setTab] = useState<Tab>(navigator.onLine ? 'items' : 'pos')
+  const [tab, setTab] = useState<Tab>(navigator.onLine ? 'dashboard' : 'pos')
+  const [menu, setMenu] = useState(false)
   const isOwner = profile.role === 'owner'
+
+  const groups: { title: string; items: { id: Tab; label: string; owner?: boolean }[] }[] = [
+    { title: 'Hoy', items: [{ id: 'dashboard', label: 'Panel' }, { id: 'pos', label: 'Vender' }] },
+    { title: 'Ventas', items: [{ id: 'orders', label: 'Pedidos' }, { id: 'events', label: 'Bazares' }, { id: 'bring', label: 'Qué llevar' }] },
+    { title: 'Taller', items: [{ id: 'production', label: 'Producción' }, { id: 'products', label: 'Productos' }, { id: 'prices', label: 'Precios de venta' }] },
+    { title: 'Almacén', items: [{ id: 'items', label: 'Insumos' }, { id: 'purchases', label: 'Compras' }, { id: 'inventory', label: 'Inventario' }, { id: 'catalogs', label: 'Proveedores y categorías' }] },
+    {
+      title: 'Dinero',
+      items: [
+        { id: 'expenses', label: 'Gastos' },
+        { id: 'earnings', label: 'Finanzas del negocio', owner: true },
+        { id: 'payroll', label: 'Mi nómina', owner: true },
+      ],
+    },
+    { title: 'Sistema', items: [{ id: 'settings', label: 'Configuración' }] },
+  ]
+  const go = (t: Tab) => {
+    setTab(t)
+    setMenu(false)
+  }
 
   return (
     <div className="shell">
-      <header className="topbar">
-        <strong className="brand">Amigurumis</strong>
-        <nav>
-          <button className={tab === 'pos' ? 'tab active' : 'tab'} onClick={() => setTab('pos')}>
-            Vender
-          </button>
-          <button className={tab === 'items' ? 'tab active' : 'tab'} onClick={() => setTab('items')}>
-            Insumos
-          </button>
-          <button className={tab === 'prices' ? 'tab active' : 'tab'} onClick={() => setTab('prices')}>
-            Precios de venta
-          </button>
-          <button className={tab === 'products' ? 'tab active' : 'tab'} onClick={() => setTab('products')}>
-            Productos
-          </button>
-          <button className={tab === 'purchases' ? 'tab active' : 'tab'} onClick={() => setTab('purchases')}>
-            Compras
-          </button>
-          <button className={tab === 'inventory' ? 'tab active' : 'tab'} onClick={() => setTab('inventory')}>
-            Inventario
-          </button>
-          <button className={tab === 'orders' ? 'tab active' : 'tab'} onClick={() => setTab('orders')}>
-            Pedidos
-          </button>
-          <button className={tab === 'events' ? 'tab active' : 'tab'} onClick={() => setTab('events')}>
-            Bazares
-          </button>
-          <button className={tab === 'production' ? 'tab active' : 'tab'} onClick={() => setTab('production')}>
-            Producción
-          </button>
-          <button className={tab === 'expenses' ? 'tab active' : 'tab'} onClick={() => setTab('expenses')}>
-            Gastos
-          </button>
-          {isOwner && (
-            <button className={tab === 'earnings' ? 'tab active' : 'tab'} onClick={() => setTab('earnings')}>
-              Finanzas del negocio
-            </button>
-          )}
-          {isOwner && (
-            <button className={tab === 'payroll' ? 'tab active' : 'tab'} onClick={() => setTab('payroll')}>
-              Mi nómina
-            </button>
-          )}
-          <button className={tab === 'catalogs' ? 'tab active' : 'tab'} onClick={() => setTab('catalogs')}>
-            Proveedores y categorías
-          </button>
-          <button className={tab === 'settings' ? 'tab active' : 'tab'} onClick={() => setTab('settings')}>
-            Configuración
-          </button>
-        </nav>
-        <span className="spacer" />
-        <span className="muted small">{email}</span>
-        <button
-          onClick={() => {
-            localStorage.removeItem(LOGIN_KEY)
-            supabase.auth.signOut()
-          }}
-        >
-          Salir
+      <div className="mobilebar">
+        <button onClick={() => setMenu(true)} aria-label="Abrir menú">
+          ☰
         </button>
-      </header>
+        <span className="brand">Amigurumis</span>
+      </div>
+      <div className={menu ? 'scrim open' : 'scrim'} onClick={() => setMenu(false)} />
+      <aside className={menu ? 'sidebar open' : 'sidebar'}>
+        <div className="brand">Amigurumis</div>
+        <div className="brand-sub">Hecho a mano</div>
+        {groups.map((g) => {
+          const items = g.items.filter((i) => !i.owner || isOwner)
+          if (items.length === 0) return null
+          return (
+            <div key={g.title}>
+              <div className="nav-group">{g.title}</div>
+              {items.map((i) => (
+                <button key={i.id} className={tab === i.id ? 'tab active' : 'tab'} onClick={() => go(i.id)}>
+                  {i.label}
+                </button>
+              ))}
+            </div>
+          )
+        })}
+        <div className="side-foot">
+          {email}
+          <button
+            onClick={() => {
+              localStorage.removeItem(LOGIN_KEY)
+              supabase.auth.signOut()
+            }}
+          >
+            Salir
+          </button>
+        </div>
+      </aside>
       <main className="content">
+        {tab === 'dashboard' && <Dashboard isOwner={isOwner} onGo={go} />}
+        {tab === 'bring' && <WhatToBring />}
         {tab === 'pos' && <Pos />}
         {tab === 'items' && <Items />}
         {tab === 'prices' && <PriceGroups isOwner={isOwner} />}
