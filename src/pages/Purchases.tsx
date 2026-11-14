@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import Decimal from 'decimal.js'
 import { supabase } from '../supabase'
@@ -42,6 +42,7 @@ interface Line {
   itemId: string
   qty: string
   price: string
+  mode: 'keep' | 'new' // qué hacer con el precio de referencia si esta compra salió distinta
 }
 
 const label = (i: ItemLite): string => [i.name, i.brand, i.color].filter(Boolean).join(' · ') + ` (${i.purchase_unit})`
@@ -59,12 +60,20 @@ function NewPurchase(props: { items: ItemLite[]; suppliers: Supplier[]; onSaved:
   const [date, setDate] = useState(todayMX())
   const [shipping, setShipping] = useState('0')
   const [note, setNote] = useState('')
-  const [lines, setLines] = useState<Line[]>([{ key: crypto.randomUUID(), itemId: '', qty: '', price: '' }])
+  const [lines, setLines] = useState<Line[]>([{ key: crypto.randomUUID(), itemId: '', qty: '', price: '', mode: 'keep' as const }])
   const [clientId] = useState(() => crypto.randomUUID())
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
   const byId = useMemo(() => new Map(props.items.map((i) => [i.id, i])), [props.items])
+  // Precio de referencia actual de cada material (por unidad base): el que usan tus costos
+  const [current, setCurrent] = useState<Map<string, Decimal>>(new Map())
+  useEffect(() => {
+    supabase
+      .from('v_item_cost_current')
+      .select('item_id, unit_cost_base')
+      .then(({ data }) => setCurrent(new Map((data ?? []).map((r: { item_id: string; unit_cost_base: string | number }) => [r.item_id, new Decimal(String(r.unit_cost_base))]))))
+  }, [])
   const itemsTotal = lines.reduce((a, l) => a.plus(dec(l.price)), new Decimal(0))
   const ship = dec(shipping)
   const grand = itemsTotal.plus(ship)
@@ -81,6 +90,18 @@ function NewPurchase(props: { items: ItemLite[]; suppliers: Supplier[]; onSaved:
     const share = itemsTotal.gt(0) ? ship.times(price).div(itemsTotal) : new Decimal(0)
     const base = dec(l.qty).times(it.units_per_purchase)
     return `${money(price.plus(share).div(base).toFixed(4), 4)} por ${it.base_unit}`
+  }
+
+  // Costo por unidad base de este renglón (con envío repartido) y cómo se compara con el precio actual
+  function compare(l: Line): { now: Decimal; cur: Decimal | null; differs: boolean } | null {
+    const it = byId.get(l.itemId)
+    if (!it || !isPositiveNumber(l.qty) || !isNonNegativeNumber(l.price)) return null
+    const price = dec(l.price)
+    const share = itemsTotal.gt(0) ? ship.times(price).div(itemsTotal) : new Decimal(0)
+    const now = price.plus(share).div(dec(l.qty).times(it.units_per_purchase))
+    const cur = current.get(l.itemId) ?? null
+    const differs = cur !== null && cur.gt(0) && now.minus(cur).abs().div(cur).gt(0.0005)
+    return { now, cur, differs }
   }
 
   async function submit(e: FormEvent) {
@@ -101,7 +122,7 @@ function NewPurchase(props: { items: ItemLite[]; suppliers: Supplier[]; onSaved:
       p_shipping: shipping,
       p_note: note.trim() || null,
       p_client_uuid: clientId,
-      p_lines: lines.map((l) => ({ item_id: l.itemId, qty: l.qty, line_price: l.price })),
+      p_lines: lines.map((l) => ({ item_id: l.itemId, qty: l.qty, line_price: l.price, price_mode: compare(l)?.differs ? l.mode : 'keep' })),
     })
     setBusy(false)
     if (error) return setError(friendlyError(error.message))
@@ -142,8 +163,10 @@ function NewPurchase(props: { items: ItemLite[]; suppliers: Supplier[]; onSaved:
           <tbody>
             {lines.map((l) => {
               const it = byId.get(l.itemId)
+              const cmp = compare(l)
               return (
-                <tr key={l.key}>
+                <Fragment key={l.key}>
+                <tr>
                   <td>
                     <select value={l.itemId} onChange={(e) => setLine(l.key, { itemId: e.target.value })}>
                       <option value="">Elegir...</option>
@@ -174,12 +197,37 @@ function NewPurchase(props: { items: ItemLite[]; suppliers: Supplier[]; onSaved:
                     )}
                   </td>
                 </tr>
+                {it && cmp && cmp.cur === null && (
+                  <tr>
+                    <td colSpan={5} className="hint">
+                      Este material todavía no tiene precio: esta compra lo establece ({money(cmp.now.times(it.units_per_purchase).toFixed(2))} por {it.purchase_unit}).
+                    </td>
+                  </tr>
+                )}
+                {it && cmp && cmp.differs && cmp.cur && (
+                  <tr>
+                    <td colSpan={5}>
+                      <div className="alert-banner" style={{ marginTop: 0 }}>
+                        Tu precio actual: <b>{money(cmp.cur.times(it.units_per_purchase).toFixed(2))}</b> por {it.purchase_unit} · esta compra:{' '}
+                        <b>{money(cmp.now.times(it.units_per_purchase).toFixed(2))}</b> ({cmp.now.gt(cmp.cur) ? '+' : ''}
+                        {cmp.now.minus(cmp.cur).div(cmp.cur).times(100).toFixed(1)}%).
+                        <div style={{ marginTop: 6 }}>
+                          <select value={l.mode} onChange={(e) => setLine(l.key, { mode: e.target.value as 'keep' | 'new' })}>
+                            <option value="keep">Mantener mi precio actual (error, oferta o caso aislado)</option>
+                            <option value="new">Usar el precio de esta compra (cambio fijo de precio)</option>
+                          </select>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               )
             })}
           </tbody>
         </table>
         <div className="actions left">
-          <button type="button" onClick={() => setLines([...lines, { key: crypto.randomUUID(), itemId: '', qty: '', price: '' }])}>
+          <button type="button" onClick={() => setLines([...lines, { key: crypto.randomUUID(), itemId: '', qty: '', price: '', mode: 'keep' as const }])}>
             + Otro material
           </button>
         </div>
@@ -198,8 +246,9 @@ function NewPurchase(props: { items: ItemLite[]; suppliers: Supplier[]; onSaved:
           </li>
         </ul>
         <p className="hint">
-          El costo de cada material se actualiza con promedio ponderado: si ya tenías existencia a otro costo, el nuevo
-          costo es la mezcla de lo que tenías y lo que compraste.
+          Tú decides si el precio de un material cambia: si esta compra sale distinta a tu precio actual, te preguntamos por
+          renglón. La compra y tu existencia siempre quedan con lo que realmente pagaste; lo que eliges es si tus costos y
+          precios de venta se mueven con ella.
         </p>
         <Field label="Nota (opcional)">
           <input value={note} onChange={(e) => setNote(e.target.value)} />
