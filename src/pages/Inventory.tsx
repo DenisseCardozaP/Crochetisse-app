@@ -10,6 +10,7 @@ interface Row {
   name: string
   brand: string | null
   color: string | null
+  color_code: string | null
   kind: 'material' | 'packaging' | 'resale'
   base_unit: string
   min_stock: number
@@ -50,7 +51,7 @@ function Adjust(props: { row: Row; onSaved: () => void; onClose: () => void }) {
   }
 
   return (
-    <Modal title={`Ajustar existencia: ${props.row.name}${props.row.color ? ' · ' + props.row.color : ''}`} onClose={props.onClose}>
+    <Modal title={`Ajustar existencia: ${props.row.name}${props.row.color ? ' · ' + props.row.color : ''}${props.row.color_code ? ' · cód. ' + props.row.color_code : ''}`} onClose={props.onClose}>
       <p>
         Existencia actual: <b>{props.row.stock} {props.row.base_unit}</b>
       </p>
@@ -96,7 +97,7 @@ export default function Inventory() {
   const load = useCallback(async () => {
     setError('')
     const [i, s, c] = await Promise.all([
-      supabase.from('items').select('id, name, brand, color, kind, base_unit, min_stock').eq('is_active', true).order('name'),
+      supabase.from('items').select('id, name, brand, color, color_code, kind, base_unit, min_stock').eq('is_active', true).order('name'),
       supabase.from('v_item_stock').select('item_id, stock_qty'),
       supabase.from('v_item_cost_current').select('item_id, unit_cost_base'),
     ])
@@ -120,7 +121,7 @@ export default function Inventory() {
   const shown = rows.filter((r) => {
     if (kind && r.kind !== kind) return false
     if (onlyLow && !(r.min_stock > 0 && r.stock <= r.min_stock)) return false
-    const text = [r.name, r.brand, r.color].filter(Boolean).join(' ').toLowerCase()
+    const text = [r.name, r.brand, r.color, r.color_code].filter(Boolean).join(' ').toLowerCase()
     return !search || text.includes(search.toLowerCase())
   })
   const totalValue = shown.reduce((a, r) => (r.cost === null ? a : a.plus(new Decimal(r.stock).times(r.cost))), new Decimal(0))
@@ -167,7 +168,7 @@ export default function Inventory() {
                 {shown.map((r) => (
                   <tr key={r.id}>
                     <td>
-                      {[r.name, r.brand, r.color].filter(Boolean).join(' · ')}
+                      {[r.name, r.brand, r.color, r.color_code ? `cód. ${r.color_code}` : null].filter(Boolean).join(' · ')}
                       {r.min_stock > 0 && r.stock <= r.min_stock && <span className="pill">poca</span>}
                     </td>
                     <td>{KIND[r.kind]}</td>

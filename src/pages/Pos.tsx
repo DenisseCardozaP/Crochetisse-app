@@ -286,6 +286,7 @@ export default function Pos() {
         <Sell
           eventId={selected.id}
           eventName={selected.name}
+          eventDate={selected.event_date}
           products={productsFor(selected)}
           onSold={() => {
             /* la cola local se actualiza sola */

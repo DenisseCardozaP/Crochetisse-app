@@ -71,12 +71,12 @@ export async function fetchWithCache<T>(key: string, fetcher: () => Promise<T>):
 }
 
 // ---------------------------------------------------------------- cola de ventas
-export async function enqueueSale(s: Omit<OutboxSale, 'status' | 'created_at' | 'sale_date'>): Promise<void> {
+export async function enqueueSale(s: Omit<OutboxSale, 'status' | 'created_at' | 'sale_date'> & { sale_date?: string }): Promise<void> {
   await localDb.outbox.put({
     ...s,
     status: 'pending',
     created_at: new Date().toISOString(),
-    sale_date: todayMX(),
+    sale_date: s.sale_date ?? todayMX(),
   })
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Decimal from 'decimal.js'
-import { isNonNegativeNumber, money } from '../format'
+import { isNonNegativeNumber, money, todayMX } from '../format'
 import { enqueueSale, loadRefData, syncOutbox } from '../offline'
 import type { RefMethod, RefRate, RefTier, RefYarn } from '../offline'
 import { ErrorBox } from '../ui'
@@ -37,10 +37,13 @@ const D = (s: string | number): Decimal => {
 export default function Sell(props: {
   eventId: string | null
   eventName: string
+  eventDate?: string
   products: EventProduct[]
   onSold: () => void
   onClose: () => void
 }) {
+  // Si el bazar ya pasó, las ventas se guardan con la fecha del bazar (así cuentan en su quincena)
+  const saleDate = props.eventDate && props.eventDate < todayMX() ? props.eventDate : undefined
   const [methods, setMethods] = useState<RefMethod[]>([])
   const [rates, setRates] = useState<RefRate[]>([])
   const [yarn, setYarn] = useState<RefYarn[]>([])
@@ -147,6 +150,7 @@ export default function Sell(props: {
         total: Number(total.toFixed(2)),
         event_id: props.eventId,
         event_name: props.eventName,
+        sale_date: saleDate,
         payment_method_id: methodId,
         sold_at: new Date().toISOString(),
         note: note.trim() || null,
@@ -296,6 +300,7 @@ export default function Sell(props: {
               )}
             </ul>
             <input placeholder="Nota (opcional)" value={note} onChange={(e) => setNote(e.target.value)} />
+            {saleDate && <div className="alert-banner">Este bazar fue el {saleDate}: las ventas se guardarán con esa fecha.</div>}
             <ErrorBox message={error} />
             <div className="actions">
               <button onClick={reset}>Limpiar</button>

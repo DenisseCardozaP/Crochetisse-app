@@ -12,6 +12,7 @@ interface LowItem {
   name: string
   brand: string | null
   color: string | null
+  color_code: string | null
   base_unit: string
   min_stock: number
   stock: number
@@ -59,6 +60,7 @@ export default function Dashboard({ isOwner, onGo }: { isOwner: boolean; onGo: (
   const [recos, setRecos] = useState<Reco[]>([])
   const [q, setQ] = useState<Quincena | null>(null)
   const [balance, setBalance] = useState<number | null>(null)
+  const [cash, setCash] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -69,8 +71,8 @@ export default function Dashboard({ isOwner, onGo }: { isOwner: boolean; onGo: (
       const first = d <= 15 ? 1 : 16
       const last = d <= 15 ? 15 : new Date(y, m, 0).getDate()
       const pad = (n: number) => String(n).padStart(2, '0')
-      const [items, stock, ord, ev, rec, per, bal] = await Promise.all([
-        supabase.from('items').select('id, name, brand, color, base_unit, min_stock').eq('is_active', true).gt('min_stock', 0),
+      const [items, stock, ord, ev, rec, per, bal, cashR] = await Promise.all([
+        supabase.from('items').select('id, name, brand, color, color_code, base_unit, min_stock').eq('is_active', true).gt('min_stock', 0),
         supabase.from('v_item_stock').select('item_id, stock_qty'),
         supabase
           .from('v_order_summary')
@@ -83,6 +85,7 @@ export default function Dashboard({ isOwner, onGo }: { isOwner: boolean; onGo: (
           ? supabase.rpc('earnings_periods', { p_grain: 'quincena', p_from: `${y}-${pad(m)}-${pad(first)}`, p_to: `${y}-${pad(m)}-${pad(last)}` })
           : Promise.resolve({ data: null, error: null }),
         isOwner ? supabase.rpc('withdrawal_balance', { p_to: today }) : Promise.resolve({ data: null, error: null }),
+        isOwner ? supabase.rpc('money_position', { p_to: today }) : Promise.resolve({ data: null, error: null }),
       ])
       if (!alive) return
       const err = items.error ?? stock.error ?? ord.error ?? ev.error ?? rec.error ?? per.error ?? bal.error
@@ -101,6 +104,8 @@ export default function Dashboard({ isOwner, onGo }: { isOwner: boolean; onGo: (
       setQ(p0 ? { net_sales: Number(p0.net_sales), utility: Number(p0.utility), withdrawal_due: Number(p0.withdrawal_due) } : isOwner ? { net_sales: 0, utility: 0, withdrawal_due: 0 } : null)
       const b0: any = (bal.data ?? [])[0]
       setBalance(b0 ? Number(b0.balance) : null)
+      const c0: any = (cashR.data ?? [])[0]
+      setCash(c0 && c0.opening_date ? Number(c0.balance) : null)
       setLoading(false)
     })()
     return () => {
@@ -116,7 +121,7 @@ export default function Dashboard({ isOwner, onGo }: { isOwner: boolean; onGo: (
   const collectTotal = toCollect.reduce((a, o) => a + o.balance, 0)
   const toMake = recos.filter((r) => r.to_produce > 0 && r.tag !== 'nuevo').slice(0, 5)
   const top = recos.filter((r) => r.tag === 'estrella' || r.tag === 'constante').slice(0, 5)
-  const name = (i: LowItem) => [i.name, i.brand, i.color].filter(Boolean).join(' · ')
+  const name = (i: LowItem) => [i.name, i.brand, i.color, i.color_code ? `cód. ${i.color_code}` : null].filter(Boolean).join(' · ')
   const label = (o: OrderRow) => `${o.order_folio ?? o.quote_folio} · ${o.customer_name}`
 
   return (
@@ -143,6 +148,13 @@ export default function Dashboard({ isOwner, onGo }: { isOwner: boolean; onGo: (
       ) : (
         <>
           <div className="stat-grid">
+            {isOwner && cash !== null && (
+              <div className="stat">
+                <div className="k">Dinero en el negocio</div>
+                <div className="n">{money(cash)}</div>
+                <div className="s">Según tu saldo inicial y movimientos</div>
+              </div>
+            )}
             {isOwner && q && (
               <>
                 <div className="stat">

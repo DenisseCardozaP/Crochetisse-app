@@ -42,6 +42,7 @@ interface ItemLite {
   name: string
   brand: string | null
   color: string | null
+  color_code: string | null
   kind: string
   base_unit: string
   is_consumable: boolean
@@ -49,7 +50,7 @@ interface ItemLite {
   content_unit: string | null
 }
 
-const itemName = (i: ItemLite) => [i.name, i.brand, i.color].filter(Boolean).join(' · ')
+const itemName = (i: ItemLite) => [i.name, i.brand, i.color, i.color_code ? `cód. ${i.color_code}` : null].filter(Boolean).join(' · ')
 
 function ProduceForm(props: { products: ProductLite[]; onSaved: (msg: string) => void; onClose: () => void }) {
   const list = props.products.filter((p) => p.is_active && p.kind !== 'packaging')
@@ -306,7 +307,7 @@ export default function Production() {
         .order('transfer_date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(30),
-      supabase.from('items').select('id, name, brand, color, kind, base_unit, is_consumable, content_qty, content_unit').eq('is_active', true).order('name'),
+      supabase.from('items').select('id, name, brand, color, color_code, kind, base_unit, is_consumable, content_qty, content_unit').eq('is_active', true).order('name'),
     ])
     if (p.error) setError(friendlyError(p.error.message))
     else setProducts((p.data ?? []) as ProductLite[])

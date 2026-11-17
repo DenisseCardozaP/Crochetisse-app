@@ -20,6 +20,7 @@ import Earnings from './pages/Earnings'
 import Dashboard from './pages/Dashboard'
 import WhatToBring from './pages/WhatToBring'
 import Backup from './pages/Backup'
+import Money from './pages/Money'
 import Logo from './Logo'
 
 export interface Profile {
@@ -62,6 +63,7 @@ type Tab =
   | 'catalogs'
   | 'settings'
   | 'backup'
+  | 'money'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -121,6 +123,7 @@ function Shell({ email, profile }: { email: string; profile: Profile }) {
       title: 'Dinero',
       items: [
         { id: 'expenses', label: 'Gastos' },
+        { id: 'money', label: 'Dinero del negocio', owner: true },
         { id: 'earnings', label: 'Finanzas del negocio', owner: true },
         { id: 'payroll', label: 'Mi nómina', owner: true },
       ],
@@ -193,6 +196,7 @@ function Shell({ email, profile }: { email: string; profile: Profile }) {
         {tab === 'catalogs' && <Catalogs />}
         {tab === 'settings' && <Settings isOwner={isOwner} />}
         {tab === 'backup' && isOwner && <Backup />}
+        {tab === 'money' && isOwner && <Money />}
       </main>
     </div>
   )

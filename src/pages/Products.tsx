@@ -115,6 +115,7 @@ interface ItemLite {
   name: string
   brand: string | null
   color: string | null
+  color_code: string | null
   base_unit: string
 }
 
@@ -127,7 +128,7 @@ interface RecipeLine {
 }
 
 const itemLabel = (i: ItemLite): string =>
-  [i.name, i.brand, i.color].filter(Boolean).join(' · ') + ` (${i.base_unit})`
+  [i.name, i.brand, i.color, i.color_code ? `cód. ${i.color_code}` : null].filter(Boolean).join(' · ') + ` (${i.base_unit})`
 
 // ---------------------------------------------------------------- datos del producto
 function ProductForm(props: {
@@ -776,7 +777,7 @@ export default function Products({ isOwner }: { isOwner: boolean }) {
       supabase.from('v_product_overview').select('*').order('name'),
       supabase
         .from('items')
-        .select('id, name, brand, color, base_unit')
+        .select('id, name, brand, color, color_code, base_unit')
         .eq('is_consumable', true)
         .eq('is_active', true)
         .order('name'),

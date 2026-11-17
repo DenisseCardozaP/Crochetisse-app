@@ -10,6 +10,7 @@ interface ItemLite {
   name: string
   brand: string | null
   color: string | null
+  color_code: string | null
   purchase_unit: string
   base_unit: string
   units_per_purchase: number
@@ -45,7 +46,7 @@ interface Line {
   mode: 'keep' | 'new' // qué hacer con el precio de referencia si esta compra salió distinta
 }
 
-const label = (i: ItemLite): string => [i.name, i.brand, i.color].filter(Boolean).join(' · ') + ` (${i.purchase_unit})`
+const label = (i: ItemLite): string => [i.name, i.brand, i.color, i.color_code ? `cód. ${i.color_code}` : null].filter(Boolean).join(' · ') + ` (${i.purchase_unit})`
 
 function dec(s: string): Decimal {
   try {
@@ -384,7 +385,7 @@ export default function Purchases({ isOwner }: { isOwner: boolean }) {
       supabase.from('purchase_voids').select('purchase_id'),
       supabase
         .from('items')
-        .select('id, name, brand, color, purchase_unit, base_unit, units_per_purchase')
+        .select('id, name, brand, color, color_code, purchase_unit, base_unit, units_per_purchase')
         .eq('is_active', true)
         .order('name'),
       supabase.from('suppliers').select('id, name').eq('is_active', true).order('name'),
