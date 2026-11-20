@@ -1,3 +1,10 @@
+# ACTUALIZACIÓN 17 · Producto terminado que ya tenías
+
+- **Producción > "Ya tengo piezas hechas":** eliges el producto y escribes cuántas piezas tienes hechas. Entran a la existencia sin descontar materiales ni mano de obra. Se valúan al costo de la receta actual.
+- No necesita correr nada en Supabase. Solo sube la carpeta a GitHub.
+
+---
+
 # ACTUALIZACIÓN 16 · Quitar o agregar materiales al producir
 
 - **Producción > Registrar producción > Colores usados:** cada material de la receta ahora tiene también "No lo usé" (esa pieza no lleva ese material y no se descuenta).

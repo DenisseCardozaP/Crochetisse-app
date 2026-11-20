@@ -427,6 +427,70 @@ function TransferForm(props: { items: ItemLite[]; onSaved: (msg: string) => void
   )
 }
 
+function InitialStock(props: { products: ProductLite[]; stock: Map<string, number>; onSaved: () => void; onClose: () => void }) {
+  const list = props.products.filter((p) => p.is_active && p.kind !== 'packaging')
+  const [productId, setProductId] = useState('')
+  const [value, setValue] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const current = props.stock.get(productId) ?? 0
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    if (!productId) return setError('Elige el producto.')
+    let delta: Decimal
+    try {
+      if (value.trim() === '') throw new Error('x')
+      delta = new Decimal(value).minus(current)
+    } catch {
+      return setError('Escribe cuántas piezas tienes hechas.')
+    }
+    if (delta.isZero()) return setError('Ya hay esa cantidad en el sistema.')
+    setBusy(true)
+    const { error } = await supabase.rpc('adjust_product_stock', {
+      p_product_id: productId,
+      p_delta: delta.toString(),
+      p_reason: 'Existencia inicial (ya estaban hechas)',
+    })
+    setBusy(false)
+    if (error) return setError(friendlyError(error.message))
+    props.onSaved()
+  }
+
+  return (
+    <Modal title="Ya tengo piezas hechas" onClose={props.onClose}>
+      <form onSubmit={submit}>
+        <p className="muted small">
+          Para producto que ya estaba terminado antes de usar el sistema. No descuenta materiales ni mano de obra. Se valúa al costo de la receta actual.
+        </p>
+        <Field label="Producto">
+          <select value={productId} onChange={(e) => setProductId(e.target.value)}>
+            <option value="">Elegir...</option>
+            {list.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {productId && <p className="small">En el sistema ahora: <b>{current}</b> piezas</p>}
+        <Field label="Piezas que tengo hechas en total">
+          <input inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} />
+        </Field>
+        <ErrorBox message={error} />
+        <div className="actions">
+          <button type="button" onClick={props.onClose}>
+            Cancelar
+          </button>
+          <button className="primary" disabled={busy}>
+            {busy ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
 function AdjustProduct(props: { product: ProductLite; stock: number; onSaved: () => void; onClose: () => void }) {
   const [value, setValue] = useState('')
   const [reason, setReason] = useState('')
@@ -490,7 +554,7 @@ export default function Production() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [ok, setOk] = useState('')
-  const [dlg, setDlg] = useState<'' | 'produce' | 'transfer'>('')
+  const [dlg, setDlg] = useState<'' | 'produce' | 'transfer' | 'initial'>('')
   const [adjusting, setAdjusting] = useState<ProductLite | null>(null)
 
   const load = useCallback(async () => {
@@ -539,6 +603,7 @@ export default function Production() {
     <div>
       <div className="section-head">
         <h2>Producción</h2>
+        <button onClick={() => setDlg('initial')}>Ya tengo piezas hechas</button>
         <button onClick={() => setDlg('transfer')}>Pasar estambre a producción</button>
         <button className="primary" onClick={() => setDlg('produce')}>
           + Registrar producción
@@ -652,6 +717,7 @@ export default function Production() {
         </>
       )}
       {dlg === 'produce' && <ProduceForm products={products} items={items} variants={Array.from(new Set(runs.map((r) => r.variant).filter((v): v is string => !!v)))} onSaved={done} onClose={() => setDlg('')} />}
+      {dlg === 'initial' && <InitialStock products={products} stock={stock} onSaved={() => done('Existencia guardada.')} onClose={() => setDlg('')} />}
       {dlg === 'transfer' && <TransferForm items={items} onSaved={done} onClose={() => setDlg('')} />}
       {adjusting && (
         <AdjustProduct
