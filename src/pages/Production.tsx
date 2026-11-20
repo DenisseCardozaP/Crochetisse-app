@@ -74,11 +74,13 @@ function ProduceForm(props: { products: ProductLite[]; items: ItemLite[]; varian
   const [variant, setVariant] = useState('')
   const [lines, setLines] = useState<RecipeLine[]>([])
   const [swaps, setSwaps] = useState<Record<string, Part[]>>({})
+  const [extras, setExtras] = useState<Part[]>([])
   const prod = list.find((p) => p.id === productId)
   const itemById = useMemo(() => new Map(props.items.map((i) => [i.id, i])), [props.items])
 
   useEffect(() => {
     setSwaps({})
+    setExtras([])
     setLines([])
     if (!productId) return
     let cancelled = false
@@ -121,6 +123,9 @@ function ProduceForm(props: { products: ProductLite[]; items: ItemLite[]; varian
   function removePart(ref: string, idx: number) {
     setSwaps((s) => ({ ...s, [ref]: s[ref].filter((_, i) => i !== idx) }))
   }
+  function skipLine(ref: string) {
+    setSwaps((s) => ({ ...s, [ref]: [] }))
+  }
   function undoSwap(ref: string) {
     setSwaps((s) => {
       const n = { ...s }
@@ -135,10 +140,10 @@ function ProduceForm(props: { products: ProductLite[]; items: ItemLite[]; varian
     if (!isPositiveNumber(qty)) return setError('La cantidad debe ser mayor a 0.')
     const swapList: { item_id: string; parts: { item_id: string; qty: string }[] }[] = []
     for (const [ref, parts] of Object.entries(swaps)) {
-      if (parts.length === 0) return setError('Indica al menos un color en cada material que cambiaste.')
       if (parts.some((p) => !isPositiveNumber(p.qty))) return setError('Las cantidades de cada color deben ser mayores a 0.')
       swapList.push({ item_id: ref, parts: parts.map((p) => ({ item_id: p.item_id, qty: p.qty })) })
     }
+    if (extras.some((p) => !p.item_id || !isPositiveNumber(p.qty))) return setError('Completa material y cantidad en los materiales extra.')
     setBusy(true)
     setError('')
     const { error } = await supabase.rpc('produce_product', {
@@ -149,6 +154,7 @@ function ProduceForm(props: { products: ProductLite[]; items: ItemLite[]; varian
       p_client_uuid: clientId,
       p_swap: swapList.length ? swapList : null,
       p_variant: variant.trim() || null,
+      p_extra: extras.length ? extras.map((p) => ({ item_id: p.item_id, qty: p.qty })) : null,
     })
     setBusy(false)
     if (error) return setError(friendlyError(error.message))
@@ -188,7 +194,7 @@ function ProduceForm(props: { products: ProductLite[]; items: ItemLite[]; varian
           Costo estimado de esta tanda: <b>{estimate}</b>. Se descuentan los materiales de la receta vigente. Si es un ramo o
           arreglo, usa las piezas terminadas que haya en existencia y teje desde cero las que falten.
         </p>
-        {colorLines.length > 0 && (
+        {productId && lines.length > 0 && (
           <div className="panel-card" style={{ marginBottom: 12 }}>
             <b>Colores usados</b>
             <p className="muted small">
@@ -210,11 +216,22 @@ function ProduceForm(props: { products: ProductLite[]; items: ItemLite[]; varian
                         {' '}
                         <button type="button" onClick={() => startSwap(l)}>
                           Cambiar colores
+                        </button>{' '}
+                        <button type="button" onClick={() => skipLine(l.item_id)}>
+                          No lo usé
                         </button>
                       </>
                     )}
                   </div>
-                  {parts && (
+                  {parts && parts.length === 0 && (
+                    <div className="row-actions" style={{ marginTop: 6 }}>
+                      <span className="small">No se usa en esta pieza.</span>
+                      <button type="button" onClick={() => undoSwap(l.item_id)}>
+                        Volver a la receta
+                      </button>
+                    </div>
+                  )}
+                  {parts && parts.length > 0 && (
                     <>
                       {parts.map((p, idx) => (
                         <div key={idx} className="grid2" style={{ marginTop: 6 }}>
@@ -262,6 +279,34 @@ function ProduceForm(props: { products: ProductLite[]; items: ItemLite[]; varian
                 </div>
               )
             })}
+            <div style={{ marginTop: 10 }}>
+              <b className="small">Materiales extra</b> <span className="muted small">(no están en la receta, cantidad por pieza)</span>
+              {extras.map((p, idx) => (
+                <div key={idx} className="grid2" style={{ marginTop: 6 }}>
+                  <select value={p.item_id} onChange={(e) => setExtras((x) => x.map((q, i) => (i === idx ? { ...q, item_id: e.target.value } : q)))}>
+                    <option value="">Elegir material...</option>
+                    {props.items
+                      .filter((i) => i.kind === 'material')
+                      .map((i) => (
+                        <option key={i.id} value={i.id}>
+                          {itemName(i)}
+                        </option>
+                      ))}
+                  </select>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input inputMode="decimal" value={p.qty} onChange={(e) => setExtras((x) => x.map((q, i) => (i === idx ? { ...q, qty: e.target.value } : q)))} placeholder="cantidad por pieza" />
+                    <button type="button" onClick={() => setExtras((x) => x.filter((_, i) => i !== idx))}>
+                      Quitar
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <div className="row-actions" style={{ marginTop: 6 }}>
+                <button type="button" onClick={() => setExtras((x) => [...x, { item_id: '', qty: '' }])}>
+                  + Agregar material extra
+                </button>
+              </div>
+            </div>
           </div>
         )}
         <Field label="Variante (opcional, ej. siamés, negro, manchas)">

@@ -1,3 +1,15 @@
+# ACTUALIZACIÓN 16 · Quitar o agregar materiales al producir
+
+- **Producción > Registrar producción > Colores usados:** cada material de la receta ahora tiene también "No lo usé" (esa pieza no lleva ese material y no se descuenta).
+- **Materiales extra:** agrega materiales que no están en la receta (cantidad por pieza). Se descuentan del inventario y se suman al costo real. El costo estimado sigue siendo el de la receta.
+- Útil para productos con variaciones (ej. mini princesas con el mismo precio): la receta es la versión más cara y en las demás quitas o cambias lo que no llevan.
+
+Pasos:
+1. Supabase > SQL Editor > New query > pega TODO `supabase/0016_quitar_agregar_materiales.sql` > Run. UNA sola vez. (Si aún no corriste la 0015, corre primero la 0015 y luego la 0016.)
+2. Sube la carpeta a GitHub.
+
+---
+
 # ACTUALIZACIÓN 15 · Colores usados al producir + variante
 
 - **Producción > Registrar producción:** nueva sección "Colores usados". Cada material de la receta muestra su cantidad por pieza; con "Cambiar colores" eliges otro color del mismo estambre o repartes entre varios (ej. 30 g beige + 12 g café + 3 g negro). Si no cambias nada, se usa la receta tal cual.
