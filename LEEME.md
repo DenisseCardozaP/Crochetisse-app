@@ -1,3 +1,16 @@
+# ACTUALIZACIÓN 15 · Colores usados al producir + variante
+
+- **Producción > Registrar producción:** nueva sección "Colores usados". Cada material de la receta muestra su cantidad por pieza; con "Cambiar colores" eliges otro color del mismo estambre o repartes entre varios (ej. 30 g beige + 12 g café + 3 g negro). Si no cambias nada, se usa la receta tal cual.
+- El inventario baja del color que realmente usaste y el costo real sale de esos colores. El costo estimado sigue siendo el de la receta.
+- **Variante** (opcional): etiqueta como "siamés", "negro" o "manchas". Aparece en el historial de tandas. El producto terminado sigue contándose junto (un solo "Loaf cat").
+- Una tanda con varias piezas usa la misma mezcla para todas; para gatos distintos, registra cada uno por separado.
+
+Pasos:
+1. Supabase > SQL Editor > New query > pega TODO `supabase/0015_colores_produccion.sql` > Run. UNA sola vez.
+2. Sube la carpeta a GitHub.
+
+---
+
 # ACTUALIZACIÓN 14 · Dinero del negocio, bazares pasados y código de color
 
 - **Dinero del negocio** (menú Dinero, solo dueña): captura el **Saldo inicial** (lo que tiene el negocio hoy entre efectivo y banco; puede ser negativo si estás en rojos). Desde esa fecha el sistema suma ventas, cobros de pedidos y aportaciones, y resta compras, gastos, mesas y retiros. Ves cuánto hay, cuánto te deben y de dónde sale cada número.

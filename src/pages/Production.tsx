@@ -25,6 +25,7 @@ interface RunRow {
   unit_cost: number
   estimated_unit_cost: number
   note: string | null
+  variant: string | null
 }
 interface TransferRow {
   id: string
@@ -52,7 +53,16 @@ interface ItemLite {
 
 const itemName = (i: ItemLite) => [i.name, i.brand, i.color, i.color_code ? `cód. ${i.color_code}` : null].filter(Boolean).join(' · ')
 
-function ProduceForm(props: { products: ProductLite[]; onSaved: (msg: string) => void; onClose: () => void }) {
+interface RecipeLine {
+  item_id: string
+  per_piece: string
+}
+interface Part {
+  item_id: string
+  qty: string
+}
+
+function ProduceForm(props: { products: ProductLite[]; items: ItemLite[]; variants: string[]; onSaved: (msg: string) => void; onClose: () => void }) {
   const list = props.products.filter((p) => p.is_active && p.kind !== 'packaging')
   const [productId, setProductId] = useState('')
   const [qty, setQty] = useState('1')
@@ -61,12 +71,74 @@ function ProduceForm(props: { products: ProductLite[]; onSaved: (msg: string) =>
   const [clientId] = useState(() => crypto.randomUUID())
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [variant, setVariant] = useState('')
+  const [lines, setLines] = useState<RecipeLine[]>([])
+  const [swaps, setSwaps] = useState<Record<string, Part[]>>({})
   const prod = list.find((p) => p.id === productId)
+  const itemById = useMemo(() => new Map(props.items.map((i) => [i.id, i])), [props.items])
+
+  useEffect(() => {
+    setSwaps({})
+    setLines([])
+    if (!productId) return
+    let cancelled = false
+    ;(async () => {
+      const v = await supabase
+        .from('product_versions')
+        .select('id')
+        .eq('product_id', productId)
+        .lte('valid_from', date)
+        .order('valid_from', { ascending: false })
+        .order('version_no', { ascending: false })
+        .limit(1)
+      const vid = (v.data ?? [])[0]?.id
+      if (!vid) return
+      const c = await supabase.from('product_components').select('item_id, qty, waste_pct').eq('version_id', vid).not('item_id', 'is', null)
+      if (cancelled || c.error) return
+      setLines(
+        (c.data ?? []).map((x: { item_id: string; qty: number; waste_pct: number }) => ({
+          item_id: x.item_id,
+          per_piece: new Decimal(x.qty).times(new Decimal(1).plus(x.waste_pct)).toString(),
+        })),
+      )
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [productId, date])
+
+  const colorLines = lines.filter((l) => itemById.get(l.item_id)?.kind === 'material')
+
+  function startSwap(l: RecipeLine) {
+    setSwaps((s) => ({ ...s, [l.item_id]: [{ item_id: l.item_id, qty: l.per_piece }] }))
+  }
+  function setPart(ref: string, idx: number, patch: Partial<Part>) {
+    setSwaps((s) => ({ ...s, [ref]: s[ref].map((p, i) => (i === idx ? { ...p, ...patch } : p)) }))
+  }
+  function addPart(ref: string) {
+    setSwaps((s) => ({ ...s, [ref]: [...s[ref], { item_id: ref, qty: '' }] }))
+  }
+  function removePart(ref: string, idx: number) {
+    setSwaps((s) => ({ ...s, [ref]: s[ref].filter((_, i) => i !== idx) }))
+  }
+  function undoSwap(ref: string) {
+    setSwaps((s) => {
+      const n = { ...s }
+      delete n[ref]
+      return n
+    })
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (!productId) return setError('Elige el producto.')
     if (!isPositiveNumber(qty)) return setError('La cantidad debe ser mayor a 0.')
+    const swapList: { item_id: string; parts: { item_id: string; qty: string }[] }[] = []
+    for (const [ref, parts] of Object.entries(swaps)) {
+      if (parts.length === 0) return setError('Indica al menos un color en cada material que cambiaste.')
+      if (parts.some((p) => !isPositiveNumber(p.qty))) return setError('Las cantidades de cada color deben ser mayores a 0.')
+      swapList.push({ item_id: ref, parts: parts.map((p) => ({ item_id: p.item_id, qty: p.qty })) })
+    }
     setBusy(true)
     setError('')
     const { error } = await supabase.rpc('produce_product', {
@@ -75,6 +147,8 @@ function ProduceForm(props: { products: ProductLite[]; onSaved: (msg: string) =>
       p_date: date,
       p_note: note.trim() || null,
       p_client_uuid: clientId,
+      p_swap: swapList.length ? swapList : null,
+      p_variant: variant.trim() || null,
     })
     setBusy(false)
     if (error) return setError(friendlyError(error.message))
@@ -114,6 +188,90 @@ function ProduceForm(props: { products: ProductLite[]; onSaved: (msg: string) =>
           Costo estimado de esta tanda: <b>{estimate}</b>. Se descuentan los materiales de la receta vigente. Si es un ramo o
           arreglo, usa las piezas terminadas que haya en existencia y teje desde cero las que falten.
         </p>
+        {colorLines.length > 0 && (
+          <div className="panel-card" style={{ marginBottom: 12 }}>
+            <b>Colores usados</b>
+            <p className="muted small">
+              Si usaste otros colores o una mezcla, cámbialos aquí (cantidades por pieza, a ojo está bien). Si no cambias nada, se usa la receta.
+            </p>
+            {colorLines.map((l) => {
+              const ref = itemById.get(l.item_id)!
+              const parts = swaps[l.item_id]
+              const family = props.items.filter((i) => i.kind === 'material' && i.name === ref.name && (i.brand ?? '') === (ref.brand ?? ''))
+              const others = props.items.filter((i) => i.kind === 'material' && !family.includes(i))
+              let sum = new Decimal(0)
+              if (parts) for (const p of parts) if (isPositiveNumber(p.qty)) sum = sum.plus(p.qty)
+              return (
+                <div key={l.item_id} style={{ marginBottom: 10 }}>
+                  <div>
+                    {itemName(ref)} · receta: <b>{l.per_piece}</b> {ref.base_unit} por pieza
+                    {!parts && (
+                      <>
+                        {' '}
+                        <button type="button" onClick={() => startSwap(l)}>
+                          Cambiar colores
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  {parts && (
+                    <>
+                      {parts.map((p, idx) => (
+                        <div key={idx} className="grid2" style={{ marginTop: 6 }}>
+                          <select value={p.item_id} onChange={(e) => setPart(l.item_id, idx, { item_id: e.target.value })}>
+                            <optgroup label="Mismo estambre / material">
+                              {family.map((i) => (
+                                <option key={i.id} value={i.id}>
+                                  {itemName(i)}
+                                </option>
+                              ))}
+                            </optgroup>
+                            {others.length > 0 && (
+                              <optgroup label="Otros materiales">
+                                {others.map((i) => (
+                                  <option key={i.id} value={i.id}>
+                                    {itemName(i)}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            )}
+                          </select>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <input inputMode="decimal" value={p.qty} onChange={(e) => setPart(l.item_id, idx, { qty: e.target.value })} placeholder={`${ref.base_unit} por pieza`} />
+                            {parts.length > 1 && (
+                              <button type="button" onClick={() => removePart(l.item_id, idx)}>
+                                Quitar
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      <div className="row-actions" style={{ marginTop: 6 }}>
+                        <button type="button" onClick={() => addPart(l.item_id)}>
+                          + Otro color
+                        </button>
+                        <button type="button" onClick={() => undoSwap(l.item_id)}>
+                          Volver a la receta
+                        </button>
+                        <span className={sum.eq(l.per_piece) ? 'muted small' : 'small'}>
+                          Total: {sum.toString()} {ref.base_unit} (receta {l.per_piece})
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+        <Field label="Variante (opcional, ej. siamés, negro, manchas)">
+          <input list="run-variants" value={variant} onChange={(e) => setVariant(e.target.value)} />
+          <datalist id="run-variants">
+            {props.variants.map((v) => (
+              <option key={v} value={v} />
+            ))}
+          </datalist>
+        </Field>
         <Field label="Nota (opcional)">
           <input value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
@@ -297,7 +455,7 @@ export default function Production() {
       supabase.from('v_product_stock').select('product_id, stock_qty'),
       supabase
         .from('production_runs')
-        .select('id, product_id, qty, run_date, labor_hours, labor_cost, materials_cost, total_cost, unit_cost, estimated_unit_cost, note')
+        .select('id, product_id, qty, run_date, labor_hours, labor_cost, materials_cost, total_cost, unit_cost, estimated_unit_cost, note, variant')
         .order('run_date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(50),
@@ -396,6 +554,7 @@ export default function Production() {
                       <td>{r.run_date}</td>
                       <td>
                         {pname.get(r.product_id) ?? '—'}
+                        {r.variant && <span className="pill"> {r.variant}</span>}
                         {r.note && <span className="muted small"> · {r.note}</span>}
                       </td>
                       <td>{r.qty}</td>
@@ -447,7 +606,7 @@ export default function Production() {
           )}
         </>
       )}
-      {dlg === 'produce' && <ProduceForm products={products} onSaved={done} onClose={() => setDlg('')} />}
+      {dlg === 'produce' && <ProduceForm products={products} items={items} variants={Array.from(new Set(runs.map((r) => r.variant).filter((v): v is string => !!v)))} onSaved={done} onClose={() => setDlg('')} />}
       {dlg === 'transfer' && <TransferForm items={items} onSaved={done} onClose={() => setDlg('')} />}
       {adjusting && (
         <AdjustProduct
