@@ -271,6 +271,20 @@ function EventDetail(props: { summary: Summary; others: Summary[]; onChanged: ()
 
       <h3>Lista de precios y piezas de este bazar</h3>
       <p className="hint">El precio se decide aquí, bazar por bazar. Al agregar un producto empieza con su precio de referencia o el sugerido.</p>
+      <ul className="kv">
+        <li>
+          <span>Piezas que llevo (sin bolsas)</span>
+          <b>{list.filter((x) => x.kind !== 'packaging').reduce((n, x) => n + Number(x.qty_brought), 0)}</b>
+        </li>
+        <li>
+          <span>Dinero que llevo en producto (a precio de venta)</span>
+          <b>{money(list.filter((x) => x.kind !== 'packaging').reduce((n, x) => n + Number(x.qty_brought) * Number(x.price), 0))}</b>
+        </li>
+        <li>
+          <span>Dinero que aún me queda en producto sin vender</span>
+          <b>{money(list.filter((x) => x.kind !== 'packaging').reduce((n, x) => n + Number(x.qty_remaining) * Number(x.price), 0))}</b>
+        </li>
+      </ul>
       <div className="table-wrap">
         <table className="table">
           <thead>

@@ -1,3 +1,10 @@
+# ACTUALIZACIÓN 18 · Totales de lo que llevas al bazar
+
+- **Bazares > abrir un bazar:** arriba de la lista de precios ahora ves cuántas piezas llevas (sin bolsas), cuánto dinero llevas en producto a precio de venta y cuánto te queda sin vender. Se actualizan cuando cambias "Llevo" o el precio.
+- No necesita correr nada en Supabase. Solo sube la carpeta a GitHub.
+
+---
+
 # ACTUALIZACIÓN 17 · Producto terminado que ya tenías
 
 - **Producción > "Ya tengo piezas hechas":** eliges el producto y escribes cuántas piezas tienes hechas. Entran a la existencia sin descontar materiales ni mano de obra. Se valúan al costo de la receta actual.
